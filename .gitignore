@@ -1,0 +1,18 @@
+# Pipeline data (large Parquet files, generated artifacts)
+/data/
+web/public/data/[0-9]*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+web/node_modules/
+dist/
+web/dist/
+
+# OS
+.DS_Store
