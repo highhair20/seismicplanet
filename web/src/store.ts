@@ -44,7 +44,7 @@ export const useStore = create<State>((set) => ({
   minMagnitude: 4.0,
   maxDepth:     700,
   colorMode:    'depth',
-  globeOpacity: 0.12,
+  globeOpacity: 0.5,
 
   setWindowStart:    (t)  => set({ windowStart: t }),
   setWindowDuration: (ms) => set({ windowDuration: ms }),

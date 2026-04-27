@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { EarthquakeEvent } from '../types'
 import { toCartesian } from '../lib/coordinates'
@@ -15,6 +15,10 @@ import { useStore } from '../store'
  *
  * Deep events appear inside the transparent sphere, revealing subduction
  * geometry that is invisible on any surface-only map.
+ *
+ * Buffer management: geometry is created once per mount; attributes are
+ * updated in-place via useEffect with needsUpdate = true so the GPU
+ * re-uploads on every frame where events change (e.g., during playback).
  */
 
 const vertexShader = /* glsl */`
@@ -62,7 +66,6 @@ interface Props {
 
 export function EarthquakePoints({ events }: Props) {
   const colorMode = useStore(s => s.colorMode)
-  const prevRef   = useRef<THREE.Points>(null)
 
   const { positions, colors, sizes } = useMemo(() => {
     const n         = events.length
@@ -89,6 +92,43 @@ export function EarthquakePoints({ events }: Props) {
     return { positions, colors, sizes }
   }, [events, colorMode])
 
+  // Single BufferGeometry instance, lives for the duration of this mount cycle
+  const geometry = useMemo(() => new THREE.BufferGeometry(), [])
+
+  // Update GPU buffers whenever the computed arrays change.
+  // useEffect runs after render (synchronous with React commit phase) — a
+  // single-frame lag is imperceptible at 60 fps.
+  useEffect(() => {
+    const n       = events.length
+    const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute | undefined
+
+    if (!posAttr || posAttr.count !== n) {
+      // First time, or count changed: replace attributes entirely.
+      // Three.js treats new BufferAttribute objects as new GPU resources and
+      // uploads them automatically on the next draw call.
+      geometry.setAttribute('position',   new THREE.BufferAttribute(positions, 3))
+      geometry.setAttribute('pointColor', new THREE.BufferAttribute(colors,    3))
+      geometry.setAttribute('pointSize',  new THREE.BufferAttribute(sizes,     1))
+    } else {
+      // Same count: update array data in-place and flag for GPU re-upload.
+      posAttr.set(positions)
+      posAttr.needsUpdate = true
+
+      const colAttr  = geometry.getAttribute('pointColor') as THREE.BufferAttribute
+      colAttr.set(colors)
+      colAttr.needsUpdate = true
+
+      const sizeAttr = geometry.getAttribute('pointSize') as THREE.BufferAttribute
+      sizeAttr.set(sizes)
+      sizeAttr.needsUpdate = true
+    }
+
+    geometry.setDrawRange(0, n)
+  }, [geometry, positions, colors, sizes, events.length])
+
+  // Free the GPU buffer when this component unmounts
+  useEffect(() => () => { geometry.dispose() }, [geometry])
+
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -104,12 +144,6 @@ export function EarthquakePoints({ events }: Props) {
   if (events.length === 0) return null
 
   return (
-    <points ref={prevRef} material={material} renderOrder={4}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position"   array={positions} count={events.length} itemSize={3} />
-        <bufferAttribute attach="attributes-pointColor" array={colors}    count={events.length} itemSize={3} />
-        <bufferAttribute attach="attributes-pointSize"  array={sizes}     count={events.length} itemSize={1} />
-      </bufferGeometry>
-    </points>
+    <points geometry={geometry} material={material} renderOrder={4} />
   )
 }

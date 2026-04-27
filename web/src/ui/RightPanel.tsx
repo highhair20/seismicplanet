@@ -7,23 +7,16 @@ interface Props {
   events: EarthquakeEvent[]
 }
 
-const SPEED_OPTIONS = [
-  { label: '0.25×', value: 0.25 },
-  { label: '0.5×',  value: 0.5  },
-  { label: '1×',    value: 1    },
-  { label: '2×',    value: 2    },
-  { label: '5×',    value: 5    },
-  { label: '10×',   value: 10   },
-  { label: '50×',   value: 50   },
-]
+// Discrete speed steps — slider index maps to these values
+const SPEED_STEPS = [0.25, 0.5, 1, 2, 5, 10, 50]
 
-const WINDOW_OPTIONS = [
-  { label: '1 month',  value: YEAR_MS / 12 },
-  { label: '3 months', value: YEAR_MS / 4  },
-  { label: '6 months', value: YEAR_MS / 2  },
-  { label: '1 year',   value: YEAR_MS      },
-  { label: '5 years',  value: YEAR_MS * 5  },
-  { label: '10 years', value: YEAR_MS * 10 },
+const WINDOW_STEPS = [
+  { label: '1 MO',   value: YEAR_MS / 12 },
+  { label: '3 MO',   value: YEAR_MS / 4  },
+  { label: '6 MO',   value: YEAR_MS / 2  },
+  { label: '1 YR',   value: YEAR_MS      },
+  { label: '5 YR',   value: YEAR_MS * 5  },
+  { label: '10 YR',  value: YEAR_MS * 10 },
 ]
 
 function toCSS([r, g, b]: [number, number, number]): string {
@@ -36,15 +29,13 @@ export function RightPanel({ events }: Props) {
   const minMagnitude   = useStore(s => s.minMagnitude)
   const maxDepth       = useStore(s => s.maxDepth)
   const colorMode      = useStore(s => s.colorMode)
-  const globeOpacity   = useStore(s => s.globeOpacity)
-
-  const setIsPlaying      = useStore(s => s.setIsPlaying)   // used in handleReset
+  const isPlaying         = useStore(s => s.isPlaying)
+  const setIsPlaying      = useStore(s => s.setIsPlaying)
   const setPlaybackSpeed  = useStore(s => s.setPlaybackSpeed)
   const setWindowDuration = useStore(s => s.setWindowDuration)
   const setMinMagnitude   = useStore(s => s.setMinMagnitude)
   const setMaxDepth       = useStore(s => s.setMaxDepth)
   const setColorMode      = useStore(s => s.setColorMode)
-  const setGlobeOpacity   = useStore(s => s.setGlobeOpacity)
   const setWindowStart    = useStore(s => s.setWindowStart)
 
   const handleReset = useCallback(() => {
@@ -52,7 +43,17 @@ export function RightPanel({ events }: Props) {
     setIsPlaying(true)
   }, [setWindowStart, setIsPlaying])
 
-  // isPlaying used only for reset behaviour — play/pause lives in the timeline footer
+  // Map current windowDuration to the nearest slider index
+  const windowIdx = WINDOW_STEPS.reduce(
+    (best, s, i) => Math.abs(s.value - windowDuration) < Math.abs(WINDOW_STEPS[best].value - windowDuration) ? i : best,
+    0,
+  )
+
+  // Map current playbackSpeed to the nearest slider index
+  const speedIdx = SPEED_STEPS.reduce(
+    (best, v, i) => Math.abs(v - playbackSpeed) < Math.abs(SPEED_STEPS[best] - playbackSpeed) ? i : best,
+    0,
+  )
 
   const recent = [...events]
     .filter(e => e.magnitude >= 5.0)
@@ -64,53 +65,91 @@ export function RightPanel({ events }: Props) {
 
       {/* Playback */}
       <div className="section-label">Playback</div>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-        <button className="btn" style={{ flex: 'none', width: '100%' }} onClick={handleReset}>⏮ RESET TO 1900</button>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <button className="btn" style={{ flex: 1 }} onClick={handleReset}>⏮ RESET</button>
+        <button
+          className={`btn${isPlaying ? ' active' : ''}`}
+          style={{ flex: 1 }}
+          onClick={() => setIsPlaying(!isPlaying)}
+        >
+          {isPlaying ? '⏸ PAUSE' : '⏵ PLAY'}
+        </button>
       </div>
-      <label className="ctrl-label">Speed</label>
-      <select value={playbackSpeed} onChange={e => setPlaybackSpeed(Number(e.target.value))} style={{ marginBottom: 16 }}>
-        {SPEED_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+
+      <label className="ctrl-label">PLAYBACK SPEED</label>
+      <input
+        type="range"
+        min={0}
+        max={SPEED_STEPS.length - 1}
+        step={1}
+        value={speedIdx}
+        onChange={e => setPlaybackSpeed(SPEED_STEPS[Number(e.target.value)])}
+      />
+      <div className="slider-labels">
+        <span>SLOW</span>
+        <span className="mid">{playbackSpeed}×</span>
+        <span>FAST</span>
+      </div>
 
       {/* Display */}
-      <div className="section-label">Display</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+      <div className="section-label" style={{ marginTop: 16 }}>Display</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
 
         <div>
-          <label className="ctrl-label">Time Window</label>
-          <select value={windowDuration} onChange={e => setWindowDuration(Number(e.target.value))}>
-            {WINDOW_OPTIONS.map(o => <option key={o.label} value={o.value}>{o.label}</option>)}
-          </select>
+          <label className="ctrl-label">TIME WINDOW</label>
+          <input
+            type="range"
+            min={0}
+            max={WINDOW_STEPS.length - 1}
+            step={1}
+            value={windowIdx}
+            onChange={e => setWindowDuration(WINDOW_STEPS[Number(e.target.value)].value)}
+          />
+          <div className="slider-labels">
+            <span>1 MO</span>
+            <span className="mid">{WINDOW_STEPS[windowIdx].label}</span>
+            <span>10 YR</span>
+          </div>
         </div>
 
         <div>
-          <label className="ctrl-label">Min Magnitude · M {minMagnitude.toFixed(1)}+</label>
-          <input type="range" min={0} max={9} step={0.1}
+          <label className="ctrl-label">MIN MAGNITUDE FILTER</label>
+          <input
+            type="range"
+            min={0} max={9} step={0.1}
             value={minMagnitude}
-            onChange={e => setMinMagnitude(Number(e.target.value))} />
+            onChange={e => setMinMagnitude(Number(e.target.value))}
+          />
+          <div className="slider-labels">
+            <span>ALL</span>
+            <span className="mid">M {minMagnitude.toFixed(1)}+</span>
+            <span>M 9.0+</span>
+          </div>
         </div>
 
         <div>
-          <label className="ctrl-label">Max Depth · {maxDepth} km</label>
-          <input type="range" min={0} max={700} step={10}
+          <label className="ctrl-label">MAX DEPTH</label>
+          <input
+            type="range"
+            min={0} max={700} step={10}
             value={maxDepth}
-            onChange={e => setMaxDepth(Number(e.target.value))} />
+            onChange={e => setMaxDepth(Number(e.target.value))}
+          />
+          <div className="slider-labels">
+            <span>0 KM</span>
+            <span className="mid">{maxDepth} KM</span>
+            <span>700 KM</span>
+          </div>
         </div>
 
-        <div>
-          <label className="ctrl-label">Color Mode</label>
-          <select value={colorMode} onChange={e => setColorMode(e.target.value as 'depth' | 'magnitude')}>
-            <option value="depth">Depth</option>
-            <option value="magnitude">Magnitude</option>
-          </select>
+        <div className="toggle-row">
+          <span>Magnitude color</span>
+          <div
+            className={`toggle${colorMode === 'magnitude' ? ' on' : ''}`}
+            onClick={() => setColorMode(colorMode === 'depth' ? 'magnitude' : 'depth')}
+          />
         </div>
 
-        <div>
-          <label className="ctrl-label">Globe Opacity · {Math.round(globeOpacity * 100)}%</label>
-          <input type="range" min={0} max={0.5} step={0.01}
-            value={globeOpacity}
-            onChange={e => setGlobeOpacity(Number(e.target.value))} />
-        </div>
 
       </div>
 
@@ -160,11 +199,11 @@ const emptyStyle: React.CSSProperties = {
 }
 
 const recentDateStyle: React.CSSProperties = {
-  fontSize:   9,
-  color:      'var(--text)',
-  fontFamily: 'var(--font-mono)',
-  whiteSpace: 'nowrap',
-  overflow:   'hidden',
+  fontSize:     9,
+  color:        'var(--text)',
+  fontFamily:   'var(--font-mono)',
+  whiteSpace:   'nowrap',
+  overflow:     'hidden',
   textOverflow: 'ellipsis',
 }
 

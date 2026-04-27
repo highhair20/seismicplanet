@@ -1,7 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { OrbitControls, Stars } from '@react-three/drei'
 import { Globe } from './Globe'
-import { Atmosphere } from './Atmosphere'
 import { Coastlines } from './Coastlines'
 import { EarthquakePoints } from './EarthquakePoints'
 import { EarthquakeEvent } from '../types'
@@ -65,7 +64,6 @@ export function Scene({ events }: Props) {
 
       {/* Globe layers */}
       <Globe />
-      <Atmosphere />
       <Coastlines />
 
       {/* Earthquake hypocenters */}

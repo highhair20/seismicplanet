@@ -15,6 +15,14 @@ REQUEST_DELAY = 0.3   # seconds between requests — respectful to USGS servers
 RETRY_WAIT = 5        # base seconds for retry backoff
 
 
+class _ExceedsLimitError(Exception):
+    """USGS returned HTTP 400 because the result set exceeds 20,000 events.
+
+    Raised internally so fetch_range can split and recurse rather than
+    mistakenly treating the response as an empty result.
+    """
+
+
 def fetch_range(
     start: datetime,
     end: datetime,
@@ -32,14 +40,22 @@ def fetch_range(
             "Event density may be unusually high."
         )
 
-    raw = _fetch_csv(start, end, min_magnitude)
+    try:
+        raw = _fetch_csv(start, end, min_magnitude)
+    except _ExceedsLimitError:
+        # USGS rejected the query outright because it exceeds 20k events.
+        # Split the window and recurse — same recovery path as the row-count case.
+        mid = start + (end - start) / 2
+        left  = fetch_range(start, mid, min_magnitude, _depth + 1)
+        right = fetch_range(mid, end, min_magnitude, _depth + 1)
+        return pl.concat([left, right])
 
     if len(raw) < MAX_EVENTS:
         return normalize(raw)
 
-    # Exactly MAX_EVENTS — response is likely truncated; split and recurse.
+    # Exactly MAX_EVENTS rows — response is likely truncated; split and recurse.
     mid = start + (end - start) / 2
-    left = fetch_range(start, mid, min_magnitude, _depth + 1)
+    left  = fetch_range(start, mid, min_magnitude, _depth + 1)
     right = fetch_range(mid, end, min_magnitude, _depth + 1)
     return pl.concat([left, right])
 
@@ -105,10 +121,14 @@ def _fetch_csv(start: datetime, end: datetime, min_magnitude: float) -> pl.DataF
             return df if len(df) > 0 else pl.DataFrame()
 
         except httpx.HTTPStatusError as exc:
-            # USGS returns 400 with body "No data found for your request" when
-            # the time range has zero events — treat as empty, not an error.
             if exc.response.status_code == 400:
-                return pl.DataFrame()
+                body = exc.response.text
+                if "No data found" in body:
+                    # Genuine empty result for this time window.
+                    return pl.DataFrame()
+                # "exceeds search limit of 20000" or other 400 — bubble up so
+                # fetch_range can split the window and retry.
+                raise _ExceedsLimitError(body) from exc
             if attempt < 2:
                 time.sleep(RETRY_WAIT * (attempt + 1))
             else:

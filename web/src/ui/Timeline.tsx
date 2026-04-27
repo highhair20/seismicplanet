@@ -61,6 +61,15 @@ export function Timeline() {
       <div style={scrubRowStyle}>
 
         <button
+          className="btn"
+          style={playBtnStyle}
+          title="Reset to 1900"
+          onClick={() => { setIsPlaying(false); setWindowStart(DATA_START) }}
+        >
+          ⏮
+        </button>
+
+        <button
           className={`btn${isPlaying ? ' active' : ''}`}
           style={playBtnStyle}
           onClick={() => setIsPlaying(!isPlaying)}
@@ -84,9 +93,9 @@ export function Timeline() {
 
       </div>
 
-      {/* Year markers — offset by play button width */}
+      {/* Year markers — offset by reset + play button widths + gap */}
       <div style={markersWrapStyle}>
-        <div style={{ width: 36, flexShrink: 0 }} />
+        <div style={{ width: 80, flexShrink: 0 }} />
         <div style={{ position: 'relative', flex: 1 }}>
           {[1900, 1920, 1940, 1960, 1980, 2000, 2010, 2020].map(yr => {
             const pct = (new Date(`${yr}-01-01T00:00:00Z`).getTime() - DATA_START) / TOTAL_MS * 100
