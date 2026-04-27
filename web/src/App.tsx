@@ -37,7 +37,7 @@ export function App() {
       {/* ── 3D Globe ───────────────────────────────────────────── */}
       <main style={mapStyle}>
         <Canvas
-          camera={{ position: [-0.69, 1.05, 1.15], fov: 45, near: 0.1, far: 1000 }}
+          camera={{ position: [-0.61, 1.46, 1.78], fov: 45, near: 0.1, far: 1000 }}
           gl={{ antialias: true, alpha: false }}
           style={{ position: 'absolute', inset: 0 }}
         >
@@ -52,7 +52,7 @@ export function App() {
 
       {/* ── Footer timeline ────────────────────────────────────── */}
       <footer style={footerStyle}>
-        <Timeline />
+        <Timeline events={events} />
       </footer>
 
     </div>
@@ -63,7 +63,7 @@ export function App() {
 
 const gridStyle: React.CSSProperties = {
   display:             'grid',
-  gridTemplateRows:    '56px 1fr 100px',
+  gridTemplateRows:    '56px 1fr 120px',
   gridTemplateColumns: '260px 1fr 260px',
   gridTemplateAreas:   '"header header header" "left map right" "footer footer footer"',
   height:              '100%',

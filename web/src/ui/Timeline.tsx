@@ -1,31 +1,62 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useStore, DATA_START, DATA_END, YEAR_MS } from '../store'
+import { depthColor, magnitudeColor } from '../lib/colors'
+import { EarthquakeEvent } from '../types'
+import { yearCache } from '../hooks/useEarthquakeData'
 
 const TOTAL_MS = DATA_END - DATA_START
 
-const WINDOW_OPTIONS = [
-  { label: '1 month',  value: YEAR_MS / 12 },
-  { label: '3 months', value: YEAR_MS / 4  },
-  { label: '6 months', value: YEAR_MS / 2  },
-  { label: '1 year',   value: YEAR_MS      },
-  { label: '5 years',  value: YEAR_MS * 5  },
-  { label: '10 years', value: YEAR_MS * 10 },
-]
-
-function fmtDate(ms: number): string {
-  return new Date(ms).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+interface Props {
+  events: EarthquakeEvent[]
 }
 
-export function Timeline() {
+function fmtDate(ms: number): string {
+  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+export function Timeline({ events }: Props) {
   const windowStart    = useStore(s => s.windowStart)
   const windowDuration = useStore(s => s.windowDuration)
   const isPlaying      = useStore(s => s.isPlaying)
+  const colorMode      = useStore(s => s.colorMode)
 
-  const setWindowStart    = useStore(s => s.setWindowStart)
-  const setWindowDuration = useStore(s => s.setWindowDuration)
-  const setIsPlaying      = useStore(s => s.setIsPlaying)
+  const setWindowStart = useStore(s => s.setWindowStart)
+  const setIsPlaying   = useStore(s => s.setIsPlaying)
 
-  const progress = Math.max(0, Math.min(1, (windowStart - DATA_START) / TOTAL_MS))
+  const progress  = Math.max(0, Math.min(1, (windowStart - DATA_START) / TOTAL_MS))
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // Redraw ticks whenever cached data changes (events prop is the proxy signal)
+  // or colorMode changes. Renders ALL loaded years from yearCache, not just the
+  // current window, so ticks span the full timeline.
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const dpr  = window.devicePixelRatio || 1
+    canvas.width  = rect.width  * dpr
+    canvas.height = rect.height * dpr
+    ctx.scale(dpr, dpr)
+
+    const W = rect.width
+    const H = rect.height
+    ctx.clearRect(0, 0, W, H)
+
+    for (const yearEvents of yearCache.values()) {
+      for (const e of yearEvents) {
+        const x = (e.time - DATA_START) / TOTAL_MS * W
+        const h = Math.max(2, Math.min(H - 2, (e.magnitude - 3.5) * (H / 8)))
+        const [r, g, b] = colorMode === 'depth'
+          ? depthColor(e.depth_km)
+          : magnitudeColor(e.magnitude)
+        ctx.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},0.75)`
+        ctx.fillRect(x - 1, H - h, 2, h)
+      }
+    }
+  }, [events, colorMode])
 
   const handleScrub = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,31 +69,19 @@ export function Timeline() {
   return (
     <div style={containerStyle}>
 
-      {/* Top row: date range | window selector */}
+      {/* Header: label | date range | event count */}
       <div style={headerRowStyle}>
-        <span style={dateRangeStyle}>
-          {fmtDate(windowStart)}&nbsp;–&nbsp;{fmtDate(windowStart + windowDuration)}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={monoLabelStyle}>WINDOW</span>
-          <select
-            value={windowDuration}
-            onChange={e => setWindowDuration(Number(e.target.value))}
-            style={selectStyle}
-          >
-            {WINDOW_OPTIONS.map(o => (
-              <option key={o.label} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
+        <span style={monoMutedStyle}>TIME SERIES</span>
+        <span style={dateRangeStyle}>{fmtDate(windowStart)}</span>
+        <span style={monoMutedStyle}>{events.length.toLocaleString()}&nbsp;EVENTS</span>
       </div>
 
-      {/* Play button + scrubber bar on same row */}
-      <div style={scrubRowStyle}>
+      {/* Controls + bar */}
+      <div style={controlsRowStyle}>
 
         <button
           className="btn"
-          style={playBtnStyle}
+          style={ctrlBtnStyle}
           title="Reset to 1900"
           onClick={() => { setIsPlaying(false); setWindowStart(DATA_START) }}
         >
@@ -71,20 +90,23 @@ export function Timeline() {
 
         <button
           className={`btn${isPlaying ? ' active' : ''}`}
-          style={playBtnStyle}
+          style={ctrlBtnStyle}
           onClick={() => setIsPlaying(!isPlaying)}
         >
           {isPlaying ? '⏸' : '⏵'}
         </button>
 
-        {/* Scrubber bar */}
         <div style={barWrapStyle}>
+          {/* Fill gradient */}
           <div style={{ ...barFillStyle, width: `${progress * 100}%` }} />
+
+          {/* All-years event ticks */}
+          <canvas ref={canvasRef} style={canvasStyle} />
+
+          {/* Transparent scrubber overlay */}
           <input
             type="range"
-            min={0}
-            max={10_000}
-            step={1}
+            min={0} max={10_000} step={1}
             value={Math.round(progress * 10_000)}
             onChange={handleScrub}
             style={scrubberStyle}
@@ -93,27 +115,15 @@ export function Timeline() {
 
       </div>
 
-      {/* Year markers — offset by reset + play button widths + gap */}
-      <div style={markersWrapStyle}>
-        <div style={{ width: 80, flexShrink: 0 }} />
-        <div style={{ position: 'relative', flex: 1 }}>
-          {[1900, 1920, 1940, 1960, 1980, 2000, 2010, 2020].map(yr => {
-            const pct = (new Date(`${yr}-01-01T00:00:00Z`).getTime() - DATA_START) / TOTAL_MS * 100
-            if (pct < 0 || pct > 100) return null
-            return (
-              <span key={yr} style={{ ...markerStyle, left: `${pct}%` }}>{yr}</span>
-            )
-          })}
-        </div>
-      </div>
-
     </div>
   )
 }
 
+/* ── Styles ─────────────────────────────────────────────────────── */
+
 const containerStyle: React.CSSProperties = {
   height:        '100%',
-  padding:       '10px 24px 6px',
+  padding:       '10px 20px',
   display:       'flex',
   flexDirection: 'column',
   gap:           6,
@@ -126,13 +136,12 @@ const headerRowStyle: React.CSSProperties = {
   justifyContent: 'space-between',
 }
 
-const monoLabelStyle: React.CSSProperties = {
+const monoMutedStyle: React.CSSProperties = {
   fontFamily:    'var(--font-mono)',
   fontSize:      9,
   letterSpacing: 3,
   color:         'var(--muted)',
   textTransform: 'uppercase' as const,
-  flexShrink:    0,
 }
 
 const dateRangeStyle: React.CSSProperties = {
@@ -141,38 +150,28 @@ const dateRangeStyle: React.CSSProperties = {
   color:      'var(--accent)',
 }
 
-const selectStyle: React.CSSProperties = {
-  width:        'auto',
-  fontSize:     10,
-  padding:      '3px 8px',
-  background:   'rgba(255,255,255,0.03)',
-  border:       '1px solid var(--border)',
-  borderRadius: 3,
-  color:        'var(--text)',
-  fontFamily:   'var(--font-mono)',
-  cursor:       'pointer',
-}
-
-const scrubRowStyle: React.CSSProperties = {
+const controlsRowStyle: React.CSSProperties = {
   display:    'flex',
   alignItems: 'stretch',
   gap:        8,
 }
 
-const playBtnStyle: React.CSSProperties = {
-  flex:       'none',
-  width:      38,
-  fontSize:   14,
-  padding:    '0 4px',
+const ctrlBtnStyle: React.CSSProperties = {
+  flex:     'none',
+  width:    38,
+  fontSize: 14,
+  padding:  '0 4px',
 }
 
 const barWrapStyle: React.CSSProperties = {
   position:     'relative',
   flex:         1,
-  height:       34,
+  height:       40,
   background:   'rgba(255,255,255,0.02)',
   border:       '1px solid var(--border)',
   borderRadius: 3,
+  overflow:     'hidden',
+  cursor:       'pointer',
 }
 
 const barFillStyle: React.CSSProperties = {
@@ -180,12 +179,19 @@ const barFillStyle: React.CSSProperties = {
   top:           0,
   left:          0,
   bottom:        0,
-  background:    'linear-gradient(90deg, rgba(0,245,212,0.06), rgba(0,245,212,0.18))',
+  background:    'linear-gradient(90deg, rgba(0,245,212,0.08), rgba(0,245,212,0.2))',
   borderRight:   '2px solid var(--accent)',
-  boxShadow:     '2px 0 10px var(--accent)',
+  boxShadow:     '2px 0 12px var(--accent)',
   pointerEvents: 'none',
   transition:    'width 0.1s linear',
-  borderRadius:  '3px 0 0 3px',
+}
+
+const canvasStyle: React.CSSProperties = {
+  position:      'absolute',
+  inset:         0,
+  width:         '100%',
+  height:        '100%',
+  pointerEvents: 'none',
 }
 
 const scrubberStyle: React.CSSProperties = {
@@ -198,20 +204,4 @@ const scrubberStyle: React.CSSProperties = {
   margin:   0,
   padding:  0,
   zIndex:   1,
-}
-
-const markersWrapStyle: React.CSSProperties = {
-  display:    'flex',
-  gap:        8,
-  height:     10,
-}
-
-const markerStyle: React.CSSProperties = {
-  position:      'absolute',
-  transform:     'translateX(-50%)',
-  fontFamily:    'var(--font-mono)',
-  fontSize:      8,
-  color:         'var(--muted)',
-  letterSpacing: 1,
-  pointerEvents: 'none',
 }

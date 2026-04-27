@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { EarthquakeEvent } from '../types'
 import { useStore } from '../store'
 
-// In-memory cache so years aren't re-fetched as the time window moves
-const yearCache = new Map<number, EarthquakeEvent[]>()
+// In-memory cache so years aren't re-fetched as the time window moves.
+// Exported so the timeline can render ticks for all loaded years, not just
+// the current window.
+export const yearCache = new Map<number, EarthquakeEvent[]>()
 
 function yearOf(ms: number): number {
   return new Date(ms).getUTCFullYear()

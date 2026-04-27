@@ -92,8 +92,7 @@ export function RightPanel({ events }: Props) {
       </div>
 
       {/* Display */}
-      <div className="section-label" style={{ marginTop: 16 }}>Display</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16, marginTop: 16 }}>
 
         <div>
           <label className="ctrl-label">TIME WINDOW</label>
