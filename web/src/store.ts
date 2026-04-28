@@ -25,6 +25,10 @@ interface State {
   hazardMagnitude:  number   // minimum magnitude threshold for probability
   hazardYears:      number   // forecast horizon in years
 
+  // Camera — updated from Scene useFrame for visibility filtering
+  cameraPos:    [number, number, number]
+  cameraMatrix: number[]   // flat 16-element projection×view matrix
+
   // Actions
   setWindowStart:    (t: number) => void
   setWindowDuration: (ms: number) => void
@@ -38,6 +42,8 @@ interface State {
   setShowHazard:      (b: boolean) => void
   setHazardMagnitude: (m: number) => void
   setHazardYears:     (y: number) => void
+  setCameraPos:       (p: [number, number, number]) => void
+  setCameraMatrix:    (m: number[]) => void
 }
 
 export const DATA_START = DATA_START_MS
@@ -45,12 +51,12 @@ export const DATA_END   = Date.now()
 export { YEAR_MS }
 
 export const useStore = create<State>((set) => ({
-  windowStart:    Date.now() - THREE_MONTHS_MS,
+  windowStart:    new Date('1990-01-01T00:00:00Z').getTime(),
   windowDuration: THREE_MONTHS_MS,
-  isPlaying:      false,
-  playbackSpeed:  1,
+  isPlaying:      true,
+  playbackSpeed:  0.008,
 
-  minMagnitude: 4.0,
+  minMagnitude: 3.0,
   maxDepth:     700,
   globeOpacity:   0.5,
   showPoints:     true,
@@ -59,6 +65,9 @@ export const useStore = create<State>((set) => ({
   showHazard:      false,
   hazardMagnitude: 6.5,
   hazardYears:     30,
+
+  cameraPos:    [-0.61, 1.46, 1.78],
+  cameraMatrix: new Array(16).fill(0),
 
   setWindowStart:    (t)  => set({ windowStart: t }),
   setWindowDuration: (ms) => set({ windowDuration: ms }),
@@ -72,4 +81,6 @@ export const useStore = create<State>((set) => ({
   setShowHazard:      (b)  => set({ showHazard: b }),
   setHazardMagnitude: (m)  => set({ hazardMagnitude: m }),
   setHazardYears:     (y)  => set({ hazardYears: y }),
+  setCameraPos:       (p)  => set({ cameraPos: p }),
+  setCameraMatrix:    (m)  => set({ cameraMatrix: m }),
 }))

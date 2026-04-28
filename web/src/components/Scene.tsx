@@ -1,4 +1,5 @@
 import { useFrame } from '@react-three/fiber'
+import { useRef } from 'react'
 import { OrbitControls, Stars } from '@react-three/drei'
 import { Globe } from './Globe'
 import { Coastlines } from './Coastlines'
@@ -32,21 +33,38 @@ export function Scene({ events }: Props) {
   const showDepthLines = useStore(s => s.showDepthLines)
   const setWindowStart = useStore(s => s.setWindowStart)
   const setIsPlaying   = useStore(s => s.setIsPlaying)
+  const setCameraPos    = useStore(s => s.setCameraPos)
+  const setCameraMatrix = useStore(s => s.setCameraMatrix)
 
-  useFrame((_, delta) => {
-    if (!isPlaying) return
+  // Throttle camera-position updates to ~5fps so the RightPanel visibility
+  // filter stays in sync without triggering excessive React re-renders.
+  const cameraSyncAccum = useRef(0)
+  useFrame(({ camera }, delta) => {
+    // Advance playback
+    if (isPlaying) {
+      const advance   = delta * playbackSpeed * YEAR_MS
+      const nextStart = windowStart + advance
+      const maxStart  = DATA_END - windowDuration
 
-    const advance   = delta * playbackSpeed * YEAR_MS
-    const nextStart = windowStart + advance
-    const maxStart  = DATA_END - windowDuration
-
-    if (nextStart >= maxStart) {
-      setWindowStart(maxStart)
-      setIsPlaying(false)
-      return
+      if (nextStart >= maxStart) {
+        setWindowStart(maxStart)
+        setIsPlaying(false)
+      } else {
+        setWindowStart(nextStart)
+      }
     }
 
-    setWindowStart(nextStart)
+    // Sync camera state at ~5fps for RightPanel visibility filtering
+    cameraSyncAccum.current += delta
+    if (cameraSyncAccum.current >= 0.2) {
+      cameraSyncAccum.current = 0
+      const p = camera.position
+      setCameraPos([p.x, p.y, p.z])
+      // Combined projection×view matrix — used to build a Frustum in RightPanel
+      camera.updateMatrixWorld()
+      const pv = camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse)
+      setCameraMatrix(pv.elements.slice())
+    }
   })
 
   return (

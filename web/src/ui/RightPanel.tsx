@@ -2,13 +2,15 @@ import { useCallback } from 'react'
 import { useStore, DATA_START, YEAR_MS } from '../store'
 import { EarthquakeEvent } from '../types'
 import { magnitudeColor } from '../lib/colors'
+import { toCartesian } from '../lib/coordinates'
+import * as THREE from 'three'
 
 interface Props {
   events: EarthquakeEvent[]
 }
 
 // Discrete speed steps — slider index maps to these values
-const SPEED_STEPS = [0.1, 0.25, 0.5, 1]
+const SPEED_STEPS = [0.008, 0.016, 0.024, 0.032, 0.04]
 
 const WINDOW_STEPS = [
   { label: '1 MO',   value: YEAR_MS / 12 },
@@ -45,6 +47,8 @@ export function RightPanel({ events }: Props) {
   const setHazardMagnitude = useStore(s => s.setHazardMagnitude)
   const setHazardYears     = useStore(s => s.setHazardYears)
   const setWindowStart     = useStore(s => s.setWindowStart)
+  const cameraPos          = useStore(s => s.cameraPos)
+  const cameraMatrix       = useStore(s => s.cameraMatrix)
 
   const handleReset = useCallback(() => {
     setWindowStart(DATA_START)
@@ -63,10 +67,31 @@ export function RightPanel({ events }: Props) {
     0,
   )
 
-  const recent = [...events]
-    .filter(e => e.magnitude >= 5.0)
-    .sort((a, b) => b.magnitude - a.magnitude)
-    .slice(0, 12)
+  // Build a frustum from the stored projection×view matrix.
+  // Falls back to hemisphere check if the matrix hasn't been populated yet.
+  const frustum = new THREE.Frustum()
+  const hasFrustum = cameraMatrix.some(v => v !== 0)
+  if (hasFrustum) {
+    frustum.setFromProjectionMatrix(new THREE.Matrix4().fromArray(cameraMatrix))
+  }
+
+  // Hemisphere fallback: camera-direction dot product
+  const [cx, cy, cz] = cameraPos
+  const camLen = Math.sqrt(cx * cx + cy * cy + cz * cz) || 1
+  const camNorm: [number, number, number] = [cx / camLen, cy / camLen, cz / camLen]
+
+  const recent = events
+    .filter(e => {
+      const pos = toCartesian(e.lat, e.lon, 0)
+      // Hemisphere check — excludes events behind the globe regardless of zoom
+      const onNearSide = pos.x * camNorm[0] + pos.y * camNorm[1] + pos.z * camNorm[2] > 0
+      if (!onNearSide) return false
+      // Frustum check — excludes events outside the camera's field of view
+      if (hasFrustum) return frustum.containsPoint(pos)
+      return true
+    })
+    .sort((a, b) => b.time - a.time)
+    .slice(0, 100)
 
   return (
     <div style={panelStyle}>
@@ -94,9 +119,9 @@ export function RightPanel({ events }: Props) {
         onChange={e => setPlaybackSpeed(SPEED_STEPS[Number(e.target.value)])}
       />
       <div className="slider-labels">
-        <span>0.1×</span>
-        <span className="mid">{playbackSpeed}×</span>
-        <span>1×</span>
+        <span>Slow</span>
+        <span className="mid">{(speedIdx + 1) * 20}%</span>
+        <span>Fast</span>
       </div>
 
       {/* Display */}
@@ -226,10 +251,10 @@ export function RightPanel({ events }: Props) {
 
       </div>
 
-      {/* Recent significant */}
-      <div className="section-label">Significant Events</div>
+      {/* Visible events */}
+      <div className="section-label">Visible Events</div>
       {recent.length === 0 ? (
-        <div style={emptyStyle}>No M5.0+ events in window</div>
+        <div style={emptyStyle}>No events in window</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {recent.map((e, i) => {
@@ -239,8 +264,11 @@ export function RightPanel({ events }: Props) {
             })
             return (
               <div key={i} className="recent-item">
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, minWidth: 36, color: col }}>
-                  M{e.magnitude.toFixed(1)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 52 }}>
+                  <div style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: col, boxShadow: `0 0 5px ${col}` }} />
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: col }}>
+                    M{e.magnitude.toFixed(1)}
+                  </div>
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <div style={recentDateStyle}>{date}</div>

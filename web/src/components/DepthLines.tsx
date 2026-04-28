@@ -9,17 +9,58 @@ interface Props {
   events: EarthquakeEvent[]
 }
 
+const vertexShader = /* glsl */`
+  attribute vec3 lineColor;
+  varying   vec3 vColor;
+  varying   float vSideFade;
+
+  void main() {
+    vColor = lineColor;
+
+    vec3  worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+    vec3  toCamera = normalize(cameraPosition - worldPos);
+    float side     = dot(normalize(worldPos), toCamera);
+
+    vSideFade = smoothstep(-0.05, 0.25, side);
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+
+const fragmentShader = /* glsl */`
+  varying vec3  vColor;
+  varying float vSideFade;
+
+  void main() {
+    if (vSideFade <= 0.0) discard;
+    gl_FragColor = vec4(vColor, 0.5 * vSideFade);
+  }
+`
+
 /**
  * Renders a radial line from the surface down to each earthquake hypocenter.
  * Shallow events produce short spikes; deep subduction zone events produce
  * long lines plunging into the transparent globe.
  *
  * Uses LineSegments — one draw call regardless of event count.
+ * Far-side lines are faded out using the same dot-product test as EarthquakePoints.
  */
 export function DepthLines({ events }: Props) {
   const showDepthLines = useStore(s => s.showDepthLines)
 
   const geometry = useMemo(() => new THREE.BufferGeometry(), [])
+
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader,
+        fragmentShader,
+        transparent: true,
+        depthWrite:  false,
+        blending:    THREE.NormalBlending,
+      }),
+    [],
+  )
 
   useEffect(() => {
     if (!showDepthLines || events.length === 0) {
@@ -63,24 +104,25 @@ export function DepthLines({ events }: Props) {
 
     const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute | undefined
     if (!posAttr || posAttr.count !== n * 2) {
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-      geometry.setAttribute('color',    new THREE.BufferAttribute(colors, 3))
+      geometry.setAttribute('position',  new THREE.BufferAttribute(positions, 3))
+      geometry.setAttribute('lineColor', new THREE.BufferAttribute(colors, 3))
     } else {
       posAttr.set(positions); posAttr.needsUpdate = true
-      const colAttr = geometry.getAttribute('color') as THREE.BufferAttribute
+      const colAttr = geometry.getAttribute('lineColor') as THREE.BufferAttribute
       colAttr.set(colors); colAttr.needsUpdate = true
     }
 
     geometry.setDrawRange(0, n * 2)
   }, [geometry, events, showDepthLines])
 
-  useEffect(() => () => { geometry.dispose() }, [geometry])
+  useEffect(() => () => {
+    geometry.dispose()
+    material.dispose()
+  }, [geometry, material])
 
   if (!showDepthLines) return null
 
   return (
-    <lineSegments geometry={geometry} renderOrder={3}>
-      <lineBasicMaterial vertexColors transparent opacity={0.5} depthWrite={false} />
-    </lineSegments>
+    <lineSegments geometry={geometry} material={material} renderOrder={3} />
   )
 }
