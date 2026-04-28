@@ -55,8 +55,8 @@ const fragmentShader = /* glsl */`
 
     if (dist > 0.5) discard;
 
-    // Solid fill fading out over the outer third of the radius.
-    float alpha = (1.0 - smoothstep(0.30, 0.50, dist)) * 0.88 * vSideFade;
+    // Hard disc with a narrow fade only at the very edge.
+    float alpha = (1.0 - smoothstep(0.44, 0.50, dist)) * 0.88 * vSideFade;
 
     gl_FragColor = vec4(vColor, alpha);
   }
