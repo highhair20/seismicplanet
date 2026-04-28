@@ -55,19 +55,10 @@ const fragmentShader = /* glsl */`
 
     if (dist > 0.5) discard;
 
-    // Crisp disc with a narrow antialiased edge
-    float edge = 1.0 - smoothstep(0.44, 0.50, dist);
+    // Solid fill fading out over the outer third of the radius.
+    float alpha = (1.0 - smoothstep(0.30, 0.50, dist)) * 0.88 * vSideFade;
 
-    // Thin bright ring just inside the perimeter
-    float ring = smoothstep(0.34, 0.42, dist) * smoothstep(0.50, 0.43, dist);
-
-    // Subtle centre highlight
-    float highlight = 1.0 - smoothstep(0.0, 0.28, dist);
-
-    vec3  col   = min(vColor + ring * 0.45 + highlight * 0.12, vec3(1.0));
-    float alpha = edge * 0.90 * vSideFade;
-
-    gl_FragColor = vec4(col, alpha);
+    gl_FragColor = vec4(vColor, alpha);
   }
 `
 
