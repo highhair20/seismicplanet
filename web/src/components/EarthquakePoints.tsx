@@ -3,40 +3,31 @@ import * as THREE from 'three'
 import { EarthquakeEvent } from '../types'
 import { toCartesian } from '../lib/coordinates'
 import { magnitudeColor, pointSize } from '../lib/colors'
+import { useStore } from '../store'
 
 /**
  * Renders earthquake hypocenters as a WebGL point cloud inside the globe.
  *
- * Uses a custom ShaderMaterial for:
- *  - Per-point variable size (scaled by magnitude)
- *  - Circular, anti-aliased points (discard corners in fragment shader)
- *  - Additive blending so dense clusters bloom brighter
- *
- * Deep events appear inside the transparent sphere, revealing subduction
- * geometry that is invisible on any surface-only map.
- *
- * Buffer management: geometry is created once per mount; attributes are
- * updated in-place via useEffect with needsUpdate = true so the GPU
- * re-uploads on every frame where events change (e.g., during playback).
+ * Each point carries a per-vertex age (0 = oldest in window, 1 = newest)
+ * which the fragment shader uses to fade out aging events smoothly.
  */
 
 const vertexShader = /* glsl */`
   attribute float pointSize;
   attribute vec3  pointColor;
+  attribute float pointAge;    // 0 = oldest in window, 1 = newest
   varying   vec3  vColor;
   varying   float vSideFade;
+  varying   float vAge;
 
   void main() {
     vColor = pointColor;
+    vAge   = pointAge;
 
-    // Dot product of the surface normal (direction from globe centre to point)
-    // with the direction toward the camera. Positive = facing camera, negative = far side.
-    vec3  worldPos   = (modelMatrix * vec4(position, 1.0)).xyz;
-    vec3  toCamera   = normalize(cameraPosition - worldPos);
-    float side       = dot(normalize(worldPos), toCamera);
+    vec3  worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+    vec3  toCamera = normalize(cameraPosition - worldPos);
+    float side     = dot(normalize(worldPos), toCamera);
 
-    // Fade to zero before the limb; fully hidden on the far side.
-    // smoothstep(-0.05, 0.25, side): hidden below -0.05, full above 0.25.
     vSideFade = smoothstep(-0.05, 0.25, side);
 
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
@@ -48,6 +39,7 @@ const vertexShader = /* glsl */`
 const fragmentShader = /* glsl */`
   varying vec3  vColor;
   varying float vSideFade;
+  varying float vAge;
 
   void main() {
     vec2  coords = gl_PointCoord - vec2(0.5);
@@ -55,8 +47,14 @@ const fragmentShader = /* glsl */`
 
     if (dist > 0.5) discard;
 
-    // Hard disc with a narrow fade only at the very edge.
-    float alpha = (1.0 - smoothstep(0.44, 0.50, dist)) * 0.88 * vSideFade;
+    // Hard disc with narrow antialiased edge.
+    float disc = 1.0 - smoothstep(0.44, 0.50, dist);
+
+    // Age fade: newest (age=1) fully opaque, oldest (age=0) nearly gone.
+    // pow curve keeps mid-age events readable and makes the fade feel natural.
+    float ageFade = pow(vAge, 1.5);
+
+    float alpha = disc * ageFade * 0.90 * vSideFade;
 
     gl_FragColor = vec4(vColor, alpha);
   }
@@ -67,11 +65,17 @@ interface Props {
 }
 
 export function EarthquakePoints({ events }: Props) {
-  const { positions, colors, sizes } = useMemo(() => {
+  const windowStart    = useStore(s => s.windowStart)
+  const windowDuration = useStore(s => s.windowDuration)
+
+  const { positions, colors, sizes, ages } = useMemo(() => {
     const n         = events.length
     const positions = new Float32Array(n * 3)
     const colors    = new Float32Array(n * 3)
     const sizes     = new Float32Array(n)
+    const ages      = new Float32Array(n)
+
+    const windowEnd = windowStart + windowDuration
 
     for (let i = 0; i < n; i++) {
       const e   = events[i]
@@ -81,52 +85,47 @@ export function EarthquakePoints({ events }: Props) {
       positions[i * 3 + 1] = pos.y
       positions[i * 3 + 2] = pos.z
 
-      const [r, g, b]  = magnitudeColor(e.magnitude)
+      const [r, g, b]   = magnitudeColor(e.magnitude)
       colors[i * 3]     = r
       colors[i * 3 + 1] = g
       colors[i * 3 + 2] = b
 
       sizes[i] = pointSize(e.magnitude)
+
+      // Normalise event time within the window: 0 = just entered, 1 = at leading edge
+      ages[i] = Math.max(0, Math.min(1, (e.time - windowStart) / (windowEnd - windowStart)))
     }
 
-    return { positions, colors, sizes }
-  }, [events])
+    return { positions, colors, sizes, ages }
+  }, [events, windowStart, windowDuration])
 
-  // Single BufferGeometry instance, lives for the duration of this mount cycle
   const geometry = useMemo(() => new THREE.BufferGeometry(), [])
 
-  // Update GPU buffers whenever the computed arrays change.
-  // useEffect runs after render (synchronous with React commit phase) — a
-  // single-frame lag is imperceptible at 60 fps.
   useEffect(() => {
     const n       = events.length
     const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute | undefined
 
     if (!posAttr || posAttr.count !== n) {
-      // First time, or count changed: replace attributes entirely.
-      // Three.js treats new BufferAttribute objects as new GPU resources and
-      // uploads them automatically on the next draw call.
       geometry.setAttribute('position',   new THREE.BufferAttribute(positions, 3))
       geometry.setAttribute('pointColor', new THREE.BufferAttribute(colors,    3))
       geometry.setAttribute('pointSize',  new THREE.BufferAttribute(sizes,     1))
+      geometry.setAttribute('pointAge',   new THREE.BufferAttribute(ages,      1))
     } else {
-      // Same count: update array data in-place and flag for GPU re-upload.
-      posAttr.set(positions)
-      posAttr.needsUpdate = true
+      posAttr.set(positions); posAttr.needsUpdate = true
 
       const colAttr  = geometry.getAttribute('pointColor') as THREE.BufferAttribute
-      colAttr.set(colors)
-      colAttr.needsUpdate = true
+      colAttr.set(colors); colAttr.needsUpdate = true
 
       const sizeAttr = geometry.getAttribute('pointSize') as THREE.BufferAttribute
-      sizeAttr.set(sizes)
-      sizeAttr.needsUpdate = true
+      sizeAttr.set(sizes); sizeAttr.needsUpdate = true
+
+      const ageAttr  = geometry.getAttribute('pointAge') as THREE.BufferAttribute
+      ageAttr.set(ages); ageAttr.needsUpdate = true
     }
 
     geometry.setDrawRange(0, n)
-  }, [geometry, positions, colors, sizes, events.length])
+  }, [geometry, positions, colors, sizes, ages, events.length])
 
-  // Free the GPU buffer when this component unmounts
   useEffect(() => () => { geometry.dispose() }, [geometry])
 
   const material = useMemo(
