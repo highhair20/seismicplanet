@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useStore, DATA_START, YEAR_MS } from '../store'
 import { EarthquakeEvent } from '../types'
-import { depthColor, magnitudeColor } from '../lib/colors'
+import { magnitudeColor } from '../lib/colors'
 
 interface Props {
   events: EarthquakeEvent[]
@@ -28,7 +28,6 @@ export function RightPanel({ events }: Props) {
   const windowDuration = useStore(s => s.windowDuration)
   const minMagnitude   = useStore(s => s.minMagnitude)
   const maxDepth       = useStore(s => s.maxDepth)
-  const colorMode      = useStore(s => s.colorMode)
   const showPoints        = useStore(s => s.showPoints)
   const showDepthLines    = useStore(s => s.showDepthLines)
   const showHazard        = useStore(s => s.showHazard)
@@ -40,7 +39,6 @@ export function RightPanel({ events }: Props) {
   const setWindowDuration = useStore(s => s.setWindowDuration)
   const setMinMagnitude   = useStore(s => s.setMinMagnitude)
   const setMaxDepth       = useStore(s => s.setMaxDepth)
-  const setColorMode      = useStore(s => s.setColorMode)
   const setShowPoints      = useStore(s => s.setShowPoints)
   const setShowDepthLines  = useStore(s => s.setShowDepthLines)
   const setShowHazard      = useStore(s => s.setShowHazard)
@@ -160,14 +158,6 @@ export function RightPanel({ events }: Props) {
         </div>
 
         <div className="toggle-row">
-          <span>Magnitude color</span>
-          <div
-            className={`toggle${colorMode === 'magnitude' ? ' on' : ''}`}
-            onClick={() => setColorMode(colorMode === 'depth' ? 'magnitude' : 'depth')}
-          />
-        </div>
-
-        <div className="toggle-row">
           <span>Depth markers</span>
           <div
             className={`toggle${showDepthLines ? ' on' : ''}`}
@@ -243,9 +233,7 @@ export function RightPanel({ events }: Props) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {recent.map((e, i) => {
-            const col = colorMode === 'depth'
-              ? toCSS(depthColor(e.depth_km))
-              : toCSS(magnitudeColor(e.magnitude))
+            const col = toCSS(magnitudeColor(e.magnitude))
             const date = new Date(e.time).toLocaleDateString('en-US', {
               month: 'short', day: 'numeric', year: 'numeric',
             })

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useStore, DATA_START, DATA_END, YEAR_MS } from '../store'
-import { depthColor, magnitudeColor } from '../lib/colors'
+import { magnitudeColor } from '../lib/colors'
 import { EarthquakeEvent } from '../types'
 import { yearCache } from '../hooks/useEarthquakeData'
 
@@ -18,8 +18,6 @@ export function Timeline({ events }: Props) {
   const windowStart    = useStore(s => s.windowStart)
   const windowDuration = useStore(s => s.windowDuration)
   const isPlaying      = useStore(s => s.isPlaying)
-  const colorMode      = useStore(s => s.colorMode)
-
   const setWindowStart = useStore(s => s.setWindowStart)
   const setIsPlaying   = useStore(s => s.setIsPlaying)
 
@@ -49,14 +47,12 @@ export function Timeline({ events }: Props) {
       for (const e of yearEvents) {
         const x = (e.time - DATA_START) / TOTAL_MS * W
         const h = Math.max(2, Math.min(H - 2, (e.magnitude - 3.5) * (H / 8)))
-        const [r, g, b] = colorMode === 'depth'
-          ? depthColor(e.depth_km)
-          : magnitudeColor(e.magnitude)
+        const [r, g, b] = magnitudeColor(e.magnitude)
         ctx.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},0.75)`
         ctx.fillRect(x - 1, H - h, 2, h)
       }
     }
-  }, [events, colorMode])
+  }, [events])
 
   const handleScrub = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,6 +109,20 @@ export function Timeline({ events }: Props) {
           />
         </div>
 
+      </div>
+
+      {/* Year markers below the bar, aligned to bar width */}
+      <div style={markersRowStyle}>
+        <div style={{ width: 84, flexShrink: 0 }} />
+        <div style={{ position: 'relative', flex: 1 }}>
+          {[1900, 1910, 1920, 1930, 1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020].map(yr => {
+            const pct = (new Date(`${yr}-01-01T00:00:00Z`).getTime() - DATA_START) / TOTAL_MS * 100
+            if (pct < 0 || pct > 100) return null
+            return (
+              <span key={yr} style={{ ...markerStyle, left: `${pct}%` }}>{yr}</span>
+            )
+          })}
+        </div>
       </div>
 
     </div>
@@ -204,4 +214,21 @@ const scrubberStyle: React.CSSProperties = {
   margin:   0,
   padding:  0,
   zIndex:   1,
+}
+
+const markersRowStyle: React.CSSProperties = {
+  display:    'flex',
+  gap:        8,
+  flexShrink: 0,
+}
+
+const markerStyle: React.CSSProperties = {
+  position:      'absolute',
+  transform:     'translateX(-50%)',
+  fontFamily:    'var(--font-mono)',
+  fontSize:      8,
+  color:         'var(--muted)',
+  letterSpacing: 1,
+  pointerEvents: 'none',
+  whiteSpace:    'nowrap',
 }

@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { ColorMode } from './types'
 
 const DATA_START_MS   = new Date('1900-01-01T00:00:00Z').getTime()
 const YEAR_MS         = 365.25 * 24 * 3600 * 1000
@@ -15,7 +14,6 @@ interface State {
   // Filters
   minMagnitude: number
   maxDepth:     number
-  colorMode:    ColorMode
 
   // Display
   globeOpacity:   number
@@ -34,7 +32,6 @@ interface State {
   setPlaybackSpeed:  (s: number) => void
   setMinMagnitude:   (m: number) => void
   setMaxDepth:       (d: number) => void
-  setColorMode:      (m: ColorMode) => void
   setGlobeOpacity:   (o: number) => void
   setShowPoints:     (b: boolean) => void
   setShowDepthLines: (b: boolean) => void
@@ -55,7 +52,6 @@ export const useStore = create<State>((set) => ({
 
   minMagnitude: 4.0,
   maxDepth:     700,
-  colorMode:      'depth',
   globeOpacity:   0.5,
   showPoints:     true,
   showDepthLines: false,
@@ -70,7 +66,6 @@ export const useStore = create<State>((set) => ({
   setPlaybackSpeed:  (s)  => set({ playbackSpeed: s }),
   setMinMagnitude:   (m)  => set({ minMagnitude: m }),
   setMaxDepth:       (d)  => set({ maxDepth: d }),
-  setColorMode:      (m)  => set({ colorMode: m }),
   setGlobeOpacity:   (o)  => set({ globeOpacity: o }),
   setShowPoints:     (b)  => set({ showPoints: b }),
   setShowDepthLines: (b)  => set({ showDepthLines: b }),

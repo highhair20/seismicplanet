@@ -2,8 +2,7 @@ import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { EarthquakeEvent } from '../types'
 import { toCartesian } from '../lib/coordinates'
-import { eventColor, pointSize } from '../lib/colors'
-import { useStore } from '../store'
+import { magnitudeColor, pointSize } from '../lib/colors'
 
 /**
  * Renders earthquake hypocenters as a WebGL point cloud inside the globe.
@@ -65,8 +64,6 @@ interface Props {
 }
 
 export function EarthquakePoints({ events }: Props) {
-  const colorMode = useStore(s => s.colorMode)
-
   const { positions, colors, sizes } = useMemo(() => {
     const n         = events.length
     const positions = new Float32Array(n * 3)
@@ -81,7 +78,7 @@ export function EarthquakePoints({ events }: Props) {
       positions[i * 3 + 1] = pos.y
       positions[i * 3 + 2] = pos.z
 
-      const [r, g, b]  = eventColor(e, colorMode)
+      const [r, g, b]  = magnitudeColor(e.magnitude)
       colors[i * 3]     = r
       colors[i * 3 + 1] = g
       colors[i * 3 + 2] = b
@@ -90,7 +87,7 @@ export function EarthquakePoints({ events }: Props) {
     }
 
     return { positions, colors, sizes }
-  }, [events, colorMode])
+  }, [events])
 
   // Single BufferGeometry instance, lives for the duration of this mount cycle
   const geometry = useMemo(() => new THREE.BufferGeometry(), [])

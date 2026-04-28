@@ -1,5 +1,3 @@
-import { EarthquakeEvent } from '../types'
-
 /**
  * Depth color scale — seismological convention:
  *   0–70 km   shallow (crustal):    red → orange
@@ -35,12 +33,6 @@ export function magnitudeColor(mag: number): [number, number, number] {
   }
   const s = (t - 0.5) * 2
   return [1.0, 1.0 - s * 0.8, 1.0 - s]
-}
-
-export function eventColor(event: EarthquakeEvent, mode: 'depth' | 'magnitude'): [number, number, number] {
-  return mode === 'depth'
-    ? depthColor(event.depth_km)
-    : magnitudeColor(event.magnitude)
 }
 
 /** Point size in scene units, scaled by magnitude. Minimum ensures tiny quakes are visible. */

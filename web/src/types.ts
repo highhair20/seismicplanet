@@ -6,4 +6,3 @@ export interface EarthquakeEvent {
   magnitude: number
 }
 
-export type ColorMode = 'depth' | 'magnitude'
