@@ -31,10 +31,17 @@ export function DepthLines({ events }: Props) {
     const positions = new Float32Array(n * 6) // 2 vertices × 3 coords
     const colors    = new Float32Array(n * 6) // 2 vertices × 3 rgb
 
+    // Map actual depth to a visual depth so shallow events are still legible.
+    // True scale makes West Coast events (< 25 km) sub-pixel; visual scale
+    // maps 0–700 km → 0–0.15 globe radii so all depths are perceptible.
+    const MAX_DEPTH_KM     = 700
+    const MAX_VISUAL_DEPTH = 0.15  // in globe-radius units
+
     for (let i = 0; i < n; i++) {
-      const e       = events[i]
+      const e            = events[i]
+      const visualDepthKm = (e.depth_km / MAX_DEPTH_KM) * MAX_VISUAL_DEPTH * 6371
       const surface = toCartesian(e.lat, e.lon, 0)
-      const hypo    = toCartesian(e.lat, e.lon, e.depth_km)
+      const hypo    = toCartesian(e.lat, e.lon, visualDepthKm)
       const [r, g, b] = depthColor(e.depth_km)
 
       const base = i * 6
