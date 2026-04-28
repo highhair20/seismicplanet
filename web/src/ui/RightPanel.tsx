@@ -8,7 +8,7 @@ interface Props {
 }
 
 // Discrete speed steps — slider index maps to these values
-const SPEED_STEPS = [0.25, 0.5, 1, 2, 5, 10, 50]
+const SPEED_STEPS = [0.1, 0.25, 0.5, 1]
 
 const WINDOW_STEPS = [
   { label: '1 MO',   value: YEAR_MS / 12 },
@@ -94,9 +94,9 @@ export function RightPanel({ events }: Props) {
         onChange={e => setPlaybackSpeed(SPEED_STEPS[Number(e.target.value)])}
       />
       <div className="slider-labels">
-        <span>SLOW</span>
+        <span>0.1×</span>
         <span className="mid">{playbackSpeed}×</span>
-        <span>FAST</span>
+        <span>1×</span>
       </div>
 
       {/* Display */}
