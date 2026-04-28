@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { OrbitControls, Stars } from '@react-three/drei'
 import { Globe } from './Globe'
 import { Coastlines } from './Coastlines'
+import { Borders } from './Borders'
 import { EarthquakePoints } from './EarthquakePoints'
 import { DepthLines } from './DepthLines'
 import { HazardLayer } from './HazardLayer'
@@ -29,6 +30,7 @@ export function Scene({ events }: Props) {
   const windowDuration = useStore(s => s.windowDuration)
   const showPoints     = useStore(s => s.showPoints)
   const showDepthLines = useStore(s => s.showDepthLines)
+  const showBorders    = useStore(s => s.showBorders)
   const setWindowStart = useStore(s => s.setWindowStart)
   const setIsPlaying   = useStore(s => s.setIsPlaying)
 
@@ -69,6 +71,7 @@ export function Scene({ events }: Props) {
       {/* Globe layers */}
       <Globe />
       <Coastlines />
+      {showBorders && <Borders />}
       <HazardLayer />
 
       {/* Earthquake hypocenters */}

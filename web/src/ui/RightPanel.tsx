@@ -31,6 +31,7 @@ export function RightPanel({ events }: Props) {
   const colorMode      = useStore(s => s.colorMode)
   const showPoints        = useStore(s => s.showPoints)
   const showDepthLines    = useStore(s => s.showDepthLines)
+  const showBorders       = useStore(s => s.showBorders)
   const showHazard        = useStore(s => s.showHazard)
   const hazardMagnitude   = useStore(s => s.hazardMagnitude)
   const hazardYears       = useStore(s => s.hazardYears)
@@ -43,6 +44,7 @@ export function RightPanel({ events }: Props) {
   const setColorMode      = useStore(s => s.setColorMode)
   const setShowPoints      = useStore(s => s.setShowPoints)
   const setShowDepthLines  = useStore(s => s.setShowDepthLines)
+  const setShowBorders     = useStore(s => s.setShowBorders)
   const setShowHazard      = useStore(s => s.setShowHazard)
   const setHazardMagnitude = useStore(s => s.setHazardMagnitude)
   const setHazardYears     = useStore(s => s.setHazardYears)
@@ -156,6 +158,14 @@ export function RightPanel({ events }: Props) {
           <div
             className={`toggle${showPoints ? ' on' : ''}`}
             onClick={() => setShowPoints(!showPoints)}
+          />
+        </div>
+
+        <div className="toggle-row">
+          <span>Borders</span>
+          <div
+            className={`toggle${showBorders ? ' on' : ''}`}
+            onClick={() => setShowBorders(!showBorders)}
           />
         </div>
 
