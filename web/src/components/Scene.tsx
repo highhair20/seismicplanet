@@ -27,6 +27,8 @@ export function Scene({ events }: Props) {
   const playbackSpeed  = useStore(s => s.playbackSpeed)
   const windowStart    = useStore(s => s.windowStart)
   const windowDuration = useStore(s => s.windowDuration)
+  const showPoints     = useStore(s => s.showPoints)
+  const showDepthLines = useStore(s => s.showDepthLines)
   const setWindowStart = useStore(s => s.setWindowStart)
   const setIsPlaying   = useStore(s => s.setIsPlaying)
 
@@ -70,10 +72,10 @@ export function Scene({ events }: Props) {
       <HazardLayer />
 
       {/* Earthquake hypocenters */}
-      <EarthquakePoints events={events} />
+      {showPoints && <EarthquakePoints events={events} />}
 
       {/* Radial depth lines: surface → hypocenter */}
-      <DepthLines events={events} />
+      {showDepthLines && <DepthLines events={events} />}
     </>
   )
 }

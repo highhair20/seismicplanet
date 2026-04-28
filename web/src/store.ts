@@ -19,6 +19,7 @@ interface State {
 
   // Display
   globeOpacity:   number
+  showPoints:     boolean
   showDepthLines: boolean
 
   // Hazard layer
@@ -35,6 +36,7 @@ interface State {
   setMaxDepth:       (d: number) => void
   setColorMode:      (m: ColorMode) => void
   setGlobeOpacity:   (o: number) => void
+  setShowPoints:     (b: boolean) => void
   setShowDepthLines: (b: boolean) => void
   setShowHazard:      (b: boolean) => void
   setHazardMagnitude: (m: number) => void
@@ -55,6 +57,7 @@ export const useStore = create<State>((set) => ({
   maxDepth:     700,
   colorMode:      'depth',
   globeOpacity:   0.5,
+  showPoints:     true,
   showDepthLines: false,
 
   showHazard:      false,
@@ -69,6 +72,7 @@ export const useStore = create<State>((set) => ({
   setMaxDepth:       (d)  => set({ maxDepth: d }),
   setColorMode:      (m)  => set({ colorMode: m }),
   setGlobeOpacity:   (o)  => set({ globeOpacity: o }),
+  setShowPoints:     (b)  => set({ showPoints: b }),
   setShowDepthLines: (b)  => set({ showDepthLines: b }),
   setShowHazard:      (b)  => set({ showHazard: b }),
   setHazardMagnitude: (m)  => set({ hazardMagnitude: m }),

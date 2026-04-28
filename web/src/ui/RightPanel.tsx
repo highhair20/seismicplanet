@@ -29,6 +29,7 @@ export function RightPanel({ events }: Props) {
   const minMagnitude   = useStore(s => s.minMagnitude)
   const maxDepth       = useStore(s => s.maxDepth)
   const colorMode      = useStore(s => s.colorMode)
+  const showPoints        = useStore(s => s.showPoints)
   const showDepthLines    = useStore(s => s.showDepthLines)
   const showHazard        = useStore(s => s.showHazard)
   const hazardMagnitude   = useStore(s => s.hazardMagnitude)
@@ -40,6 +41,7 @@ export function RightPanel({ events }: Props) {
   const setMinMagnitude   = useStore(s => s.setMinMagnitude)
   const setMaxDepth       = useStore(s => s.setMaxDepth)
   const setColorMode      = useStore(s => s.setColorMode)
+  const setShowPoints      = useStore(s => s.setShowPoints)
   const setShowDepthLines  = useStore(s => s.setShowDepthLines)
   const setShowHazard      = useStore(s => s.setShowHazard)
   const setHazardMagnitude = useStore(s => s.setHazardMagnitude)
@@ -150,6 +152,14 @@ export function RightPanel({ events }: Props) {
         </div>
 
         <div className="toggle-row">
+          <span>Magnitude markers</span>
+          <div
+            className={`toggle${showPoints ? ' on' : ''}`}
+            onClick={() => setShowPoints(!showPoints)}
+          />
+        </div>
+
+        <div className="toggle-row">
           <span>Magnitude color</span>
           <div
             className={`toggle${colorMode === 'magnitude' ? ' on' : ''}`}
@@ -158,7 +168,7 @@ export function RightPanel({ events }: Props) {
         </div>
 
         <div className="toggle-row">
-          <span>Depth lines</span>
+          <span>Depth markers</span>
           <div
             className={`toggle${showDepthLines ? ' on' : ''}`}
             onClick={() => setShowDepthLines(!showDepthLines)}
