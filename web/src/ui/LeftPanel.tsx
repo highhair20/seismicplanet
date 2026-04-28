@@ -18,13 +18,13 @@ const DEPTH_ENTRIES: { label: string; depth: number }[] = [
   { label: '700 km · Very Deep',   depth: 700 },
 ]
 
-const MAG_ENTRIES: { label: string; mag: number }[] = [
-  { label: 'M 4  Light',    mag: 4 },
-  { label: 'M 5  Moderate', mag: 5 },
-  { label: 'M 6  Strong',   mag: 6 },
-  { label: 'M 7  Major',    mag: 7 },
-  { label: 'M 8  Great',    mag: 8 },
-  { label: 'M 9  Extreme',  mag: 9 },
+const MAG_ENTRIES: { label: string; mag: number; size: number }[] = [
+  { label: 'M < 2   Micro',    mag: 1,   size: 6  },
+  { label: 'M 2–4   Minor',    mag: 3,   size: 9  },
+  { label: 'M 4–5   Light',    mag: 4.5, size: 13 },
+  { label: 'M 5–6   Moderate', mag: 5.5, size: 17 },
+  { label: 'M 6–7   Strong',   mag: 6.5, size: 22 },
+  { label: 'M 7+    Major',    mag: 7,   size: 28 },
 ]
 
 export function LeftPanel({ events }: Props) {
@@ -39,9 +39,8 @@ export function LeftPanel({ events }: Props) {
       {/* Magnitude Scale — always visible */}
       <div className="section-label">Magnitude Scale</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-        {MAG_ENTRIES.map(({ label, mag }) => {
+        {MAG_ENTRIES.map(({ label, mag, size }) => {
           const col  = toCSS(magnitudeColor(mag))
-          const size = 7 + (mag - 4) * 3
           return (
             <div key={mag} style={dotRowStyle}>
               <div style={{ ...dotStyle, width: size, height: size, background: col, boxShadow: `0 0 5px ${col}` }} />

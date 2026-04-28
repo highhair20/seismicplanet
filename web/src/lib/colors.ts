@@ -22,17 +22,21 @@ export function depthColor(depthKm: number): [number, number, number] {
 }
 
 /**
- * Magnitude color scale — blue (small) → white → red (large).
- * Centered around M5, saturated toward M7+.
+ * Magnitude color scale — stepped palette matching the style guide.
+ *   M < 2   light blue  #4fc3f7
+ *   M 2–4   green       #81c784
+ *   M 4–5   yellow      #fff176
+ *   M 5–6   orange      #ffb74d
+ *   M 6–7   red-orange  #ff7043
+ *   M 7+    red         #e53935
  */
 export function magnitudeColor(mag: number): [number, number, number] {
-  const t = Math.max(0, Math.min(1, (mag - 2.5) / 6.5))
-  if (t < 0.5) {
-    const s = t * 2
-    return [s, s, 1.0]
-  }
-  const s = (t - 0.5) * 2
-  return [1.0, 1.0 - s * 0.8, 1.0 - s]
+  if (mag < 2) return [0.31, 0.76, 0.97]   // #4fc3f7
+  if (mag < 4) return [0.51, 0.78, 0.52]   // #81c784
+  if (mag < 5) return [1.00, 0.95, 0.46]   // #fff176
+  if (mag < 6) return [1.00, 0.72, 0.30]   // #ffb74d
+  if (mag < 7) return [1.00, 0.44, 0.26]   // #ff7043
+  return             [0.90, 0.22, 0.21]    // #e53935
 }
 
 /** Point size in scene units, scaled by magnitude. Minimum ensures tiny quakes are visible. */
