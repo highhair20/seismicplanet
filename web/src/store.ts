@@ -21,7 +21,6 @@ interface State {
   globeOpacity:   number
   showPoints:     boolean
   showDepthLines: boolean
-  showBorders:    boolean
 
   // Hazard layer
   showHazard:       boolean
@@ -39,7 +38,6 @@ interface State {
   setGlobeOpacity:   (o: number) => void
   setShowPoints:     (b: boolean) => void
   setShowDepthLines: (b: boolean) => void
-  setShowBorders:    (b: boolean) => void
   setShowHazard:      (b: boolean) => void
   setHazardMagnitude: (m: number) => void
   setHazardYears:     (y: number) => void
@@ -61,7 +59,6 @@ export const useStore = create<State>((set) => ({
   globeOpacity:   0.5,
   showPoints:     true,
   showDepthLines: false,
-  showBorders:    true,
 
   showHazard:      false,
   hazardMagnitude: 6.5,
@@ -77,7 +74,6 @@ export const useStore = create<State>((set) => ({
   setGlobeOpacity:   (o)  => set({ globeOpacity: o }),
   setShowPoints:     (b)  => set({ showPoints: b }),
   setShowDepthLines: (b)  => set({ showDepthLines: b }),
-  setShowBorders:    (b)  => set({ showBorders: b }),
   setShowHazard:      (b)  => set({ showHazard: b }),
   setHazardMagnitude: (m)  => set({ hazardMagnitude: m }),
   setHazardYears:     (y)  => set({ hazardYears: y }),
