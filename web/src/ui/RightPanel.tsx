@@ -29,6 +29,10 @@ export function RightPanel({ events }: Props) {
   const minMagnitude   = useStore(s => s.minMagnitude)
   const maxDepth       = useStore(s => s.maxDepth)
   const colorMode      = useStore(s => s.colorMode)
+  const showDepthLines    = useStore(s => s.showDepthLines)
+  const showHazard        = useStore(s => s.showHazard)
+  const hazardMagnitude   = useStore(s => s.hazardMagnitude)
+  const hazardYears       = useStore(s => s.hazardYears)
   const isPlaying         = useStore(s => s.isPlaying)
   const setIsPlaying      = useStore(s => s.setIsPlaying)
   const setPlaybackSpeed  = useStore(s => s.setPlaybackSpeed)
@@ -36,7 +40,11 @@ export function RightPanel({ events }: Props) {
   const setMinMagnitude   = useStore(s => s.setMinMagnitude)
   const setMaxDepth       = useStore(s => s.setMaxDepth)
   const setColorMode      = useStore(s => s.setColorMode)
-  const setWindowStart    = useStore(s => s.setWindowStart)
+  const setShowDepthLines  = useStore(s => s.setShowDepthLines)
+  const setShowHazard      = useStore(s => s.setShowHazard)
+  const setHazardMagnitude = useStore(s => s.setHazardMagnitude)
+  const setHazardYears     = useStore(s => s.setHazardYears)
+  const setWindowStart     = useStore(s => s.setWindowStart)
 
   const handleReset = useCallback(() => {
     setWindowStart(DATA_START)
@@ -149,6 +157,72 @@ export function RightPanel({ events }: Props) {
           />
         </div>
 
+        <div className="toggle-row">
+          <span>Depth lines</span>
+          <div
+            className={`toggle${showDepthLines ? ' on' : ''}`}
+            onClick={() => setShowDepthLines(!showDepthLines)}
+          />
+        </div>
+
+      </div>
+
+      {/* Hazard layer */}
+      <div className="section-label">Seismic Hazard</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
+
+        <div className="toggle-row">
+          <span>Probability overlay</span>
+          <div
+            className={`toggle${showHazard ? ' on' : ''}`}
+            onClick={() => setShowHazard(!showHazard)}
+          />
+        </div>
+
+        {showHazard && (
+          <>
+            <div>
+              <label className="ctrl-label">MAGNITUDE THRESHOLD</label>
+              <input
+                type="range"
+                min={5.0} max={8.0} step={0.5}
+                value={hazardMagnitude}
+                onChange={e => setHazardMagnitude(Number(e.target.value))}
+              />
+              <div className="slider-labels">
+                <span>M 5.0</span>
+                <span className="mid">M {hazardMagnitude.toFixed(1)}+</span>
+                <span>M 8.0</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="ctrl-label">FORECAST HORIZON</label>
+              <input
+                type="range"
+                min={10} max={100} step={10}
+                value={hazardYears}
+                onChange={e => setHazardYears(Number(e.target.value))}
+              />
+              <div className="slider-labels">
+                <span>10 YR</span>
+                <span className="mid">{hazardYears} YR</span>
+                <span>100 YR</span>
+              </div>
+            </div>
+
+            <div style={hazardLegendStyle}>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 4 }}>
+                <div style={legendBarStyle} />
+              </div>
+              <div style={legendLabelsStyle}>
+                <span>LOW</span>
+                <span>P(≥M{hazardMagnitude.toFixed(1)} in {hazardYears}yr)</span>
+                <span>HIGH</span>
+              </div>
+            </div>
+          </>
+        )}
 
       </div>
 
@@ -210,4 +284,24 @@ const recentCoordStyle: React.CSSProperties = {
   fontSize:   9,
   color:      'var(--muted)',
   fontFamily: 'var(--font-mono)',
+}
+
+const hazardLegendStyle: React.CSSProperties = {
+  marginTop: 4,
+}
+
+const legendBarStyle: React.CSSProperties = {
+  flex:         1,
+  height:       8,
+  borderRadius: 4,
+  background:   'linear-gradient(90deg, #1a33cc, #1abfcc, #f2e61a, #f28014, #e61a0d)',
+}
+
+const legendLabelsStyle: React.CSSProperties = {
+  display:        'flex',
+  justifyContent: 'space-between',
+  fontFamily:     'var(--font-mono)',
+  fontSize:       9,
+  color:          'var(--muted)',
+  marginTop:      3,
 }

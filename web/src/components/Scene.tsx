@@ -3,6 +3,8 @@ import { OrbitControls, Stars } from '@react-three/drei'
 import { Globe } from './Globe'
 import { Coastlines } from './Coastlines'
 import { EarthquakePoints } from './EarthquakePoints'
+import { DepthLines } from './DepthLines'
+import { HazardLayer } from './HazardLayer'
 import { EarthquakeEvent } from '../types'
 import { useStore, DATA_END, YEAR_MS } from '../store'
 
@@ -65,9 +67,13 @@ export function Scene({ events }: Props) {
       {/* Globe layers */}
       <Globe />
       <Coastlines />
+      <HazardLayer />
 
       {/* Earthquake hypocenters */}
       <EarthquakePoints events={events} />
+
+      {/* Radial depth lines: surface → hypocenter */}
+      <DepthLines events={events} />
     </>
   )
 }

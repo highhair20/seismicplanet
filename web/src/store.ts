@@ -18,7 +18,13 @@ interface State {
   colorMode:    ColorMode
 
   // Display
-  globeOpacity: number
+  globeOpacity:   number
+  showDepthLines: boolean
+
+  // Hazard layer
+  showHazard:       boolean
+  hazardMagnitude:  number   // minimum magnitude threshold for probability
+  hazardYears:      number   // forecast horizon in years
 
   // Actions
   setWindowStart:    (t: number) => void
@@ -29,6 +35,10 @@ interface State {
   setMaxDepth:       (d: number) => void
   setColorMode:      (m: ColorMode) => void
   setGlobeOpacity:   (o: number) => void
+  setShowDepthLines: (b: boolean) => void
+  setShowHazard:      (b: boolean) => void
+  setHazardMagnitude: (m: number) => void
+  setHazardYears:     (y: number) => void
 }
 
 export const DATA_START = DATA_START_MS
@@ -43,8 +53,13 @@ export const useStore = create<State>((set) => ({
 
   minMagnitude: 4.0,
   maxDepth:     700,
-  colorMode:    'depth',
-  globeOpacity: 0.5,
+  colorMode:      'depth',
+  globeOpacity:   0.5,
+  showDepthLines: false,
+
+  showHazard:      false,
+  hazardMagnitude: 6.5,
+  hazardYears:     30,
 
   setWindowStart:    (t)  => set({ windowStart: t }),
   setWindowDuration: (ms) => set({ windowDuration: ms }),
@@ -54,4 +69,8 @@ export const useStore = create<State>((set) => ({
   setMaxDepth:       (d)  => set({ maxDepth: d }),
   setColorMode:      (m)  => set({ colorMode: m }),
   setGlobeOpacity:   (o)  => set({ globeOpacity: o }),
+  setShowDepthLines: (b)  => set({ showDepthLines: b }),
+  setShowHazard:      (b)  => set({ showHazard: b }),
+  setHazardMagnitude: (m)  => set({ hazardMagnitude: m }),
+  setHazardYears:     (y)  => set({ hazardYears: y }),
 }))

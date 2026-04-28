@@ -18,6 +18,7 @@ sp-query    = "pipeline.query:main"
 sp-today    = "pipeline.today:main"
 sp-export   = "pipeline.export:main"
 sp-sync     = "pipeline.sync:main"
+sp-hazard   = "pipeline.hazard:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["pipeline"]
