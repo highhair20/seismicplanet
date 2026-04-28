@@ -54,7 +54,7 @@ export const useStore = create<State>((set) => ({
   maxDepth:     700,
   globeOpacity:   0.5,
   showPoints:     true,
-  showDepthLines: false,
+  showDepthLines: true,
 
   showHazard:      false,
   hazardMagnitude: 6.5,
