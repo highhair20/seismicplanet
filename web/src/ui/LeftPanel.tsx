@@ -1,5 +1,5 @@
 import { EarthquakeEvent } from '../types'
-import { magnitudeColor } from '../lib/colors'
+import { depthColor, magnitudeColor } from '../lib/colors'
 
 interface Props {
   events: EarthquakeEvent[]
@@ -8,6 +8,15 @@ interface Props {
 function toCSS([r, g, b]: [number, number, number]): string {
   return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`
 }
+
+const DEPTH_ENTRIES: { label: string; depth: number }[] = [
+  { label: '0 km · Surface',       depth: 0   },
+  { label: '35 km · Shallow',      depth: 35  },
+  { label: '70 km · Intermediate', depth: 70  },
+  { label: '150 km',               depth: 150 },
+  { label: '300 km · Deep',        depth: 300 },
+  { label: '700 km · Very Deep',   depth: 700 },
+]
 
 const MAG_ENTRIES: { label: string; mag: number }[] = [
   { label: 'M 4  Light',    mag: 4 },
@@ -35,6 +44,21 @@ export function LeftPanel({ events }: Props) {
           const size = 7 + (mag - 4) * 3
           return (
             <div key={mag} style={dotRowStyle}>
+              <div style={{ ...dotStyle, width: size, height: size, background: col, boxShadow: `0 0 5px ${col}` }} />
+              <span style={dotLabelStyle}>{label}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Depth Scale — always visible */}
+      <div className="section-label">Depth Scale</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+        {DEPTH_ENTRIES.map(({ label, depth }) => {
+          const col  = toCSS(depthColor(depth))
+          const size = 7 + (depth / 700) * 7
+          return (
+            <div key={depth} style={dotRowStyle}>
               <div style={{ ...dotStyle, width: size, height: size, background: col, boxShadow: `0 0 5px ${col}` }} />
               <span style={dotLabelStyle}>{label}</span>
             </div>
