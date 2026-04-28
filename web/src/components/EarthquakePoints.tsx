@@ -35,8 +35,9 @@ const vertexShader = /* glsl */`
     vec3  toCamera   = normalize(cameraPosition - worldPos);
     float side       = dot(normalize(worldPos), toCamera);
 
-    // Linear fade: far-back = 5%, limb ≈ 12%, near side = 100%
-    vSideFade = clamp(side * 2.0 + 0.12, 0.05, 1.0);
+    // Fade to zero before the limb; fully hidden on the far side.
+    // smoothstep(-0.05, 0.25, side): hidden below -0.05, full above 0.25.
+    vSideFade = smoothstep(-0.05, 0.25, side);
 
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
     gl_PointSize    = pointSize * (8.0 / -mvPosition.z);
