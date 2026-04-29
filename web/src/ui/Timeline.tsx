@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore, DATA_START, DATA_END, YEAR_MS } from '../store'
-import { magnitudeColor } from '../lib/colors'
 import { EarthquakeEvent } from '../types'
-import { yearCache } from '../hooks/useEarthquakeData'
 
-const TOTAL_MS = DATA_END - DATA_START
+const VIEW_1990 = new Date('1990-01-01T00:00:00Z').getTime()
+
+const TICKS_ALL    = [1900, 1910, 1920, 1930, 1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020]
+const TICKS_1990   = [1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
+
+type ViewMode = 'all' | '1990' | 'recent'
 
 interface Props {
   events: EarthquakeEvent[]
@@ -15,52 +18,67 @@ function fmtDate(ms: number): string {
 }
 
 export function Timeline({ events }: Props) {
-  const windowStart    = useStore(s => s.windowStart)
-  const windowDuration = useStore(s => s.windowDuration)
-  const isPlaying      = useStore(s => s.isPlaying)
-  const setWindowStart = useStore(s => s.setWindowStart)
-  const setIsPlaying   = useStore(s => s.setIsPlaying)
+  const windowStart      = useStore(s => s.windowStart)
+  const windowDuration   = useStore(s => s.windowDuration)
+  const isPlaying        = useStore(s => s.isPlaying)
+  const setWindowStart   = useStore(s => s.setWindowStart)
+  const setIsPlaying     = useStore(s => s.setIsPlaying)
+  const setPlaybackSpeed = useStore(s => s.setPlaybackSpeed)
 
-  const progress  = Math.max(0, Math.min(1, (windowStart - DATA_START) / TOTAL_MS))
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [mode, setMode] = useState<ViewMode>('recent')
 
-  // Redraw ticks whenever cached data changes (events prop is the proxy signal)
-  // or colorMode changes. Renders ALL loaded years from yearCache, not just the
-  // current window, so ticks span the full timeline.
+  // View range for the bar — recent spans the last year so there's room to play
+  const recentStart = DATA_END - YEAR_MS
+  const viewStart   = mode === 'all' ? DATA_START : mode === '1990' ? VIEW_1990 : recentStart
+  const viewMs      = DATA_END - viewStart
+
+  const progress = Math.max(0, Math.min(1, (windowStart - viewStart) / viewMs))
+
+  const barRef     = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+
+  const seekToX = useCallback((clientX: number) => {
+    if (!barRef.current) return
+    const rect = barRef.current.getBoundingClientRect()
+    const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    const t    = viewStart + pct * viewMs
+    setWindowStart(Math.min(t, DATA_END - windowDuration))
+  }, [viewStart, viewMs, windowDuration, setWindowStart])
+
+  const handleBarMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true
+    seekToX(e.clientX)
+  }, [seekToX])
+
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const rect = canvas.getBoundingClientRect()
-    const dpr  = window.devicePixelRatio || 1
-    canvas.width  = rect.width  * dpr
-    canvas.height = rect.height * dpr
-    ctx.scale(dpr, dpr)
-
-    const W = rect.width
-    const H = rect.height
-    ctx.clearRect(0, 0, W, H)
-
-    for (const yearEvents of yearCache.values()) {
-      for (const e of yearEvents) {
-        const x = (e.time - DATA_START) / TOTAL_MS * W
-        const h = Math.max(2, Math.min(H - 2, (e.magnitude - 3.5) * (H / 8)))
-        const [r, g, b] = magnitudeColor(e.magnitude)
-        ctx.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},0.75)`
-        ctx.fillRect(x - 1, H - h, 2, h)
-      }
+    const onMove = (e: MouseEvent) => { if (isDragging.current) seekToX(e.clientX) }
+    const onUp   = () => { isDragging.current = false }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onUp)
     }
-  }, [events])
+  }, [seekToX])
 
-  const handleScrub = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const t = DATA_START + (Number(e.target.value) / 10_000) * TOTAL_MS
-      setWindowStart(Math.min(t, DATA_END - windowDuration))
-    },
-    [windowDuration, setWindowStart],
-  )
+  function switchMode(next: ViewMode) {
+    setMode(next)
+    if (next === 'all') {
+      setWindowStart(DATA_START)
+      setPlaybackSpeed(0.04)
+      setIsPlaying(true)
+    } else if (next === '1990') {
+      setWindowStart(VIEW_1990)
+      setPlaybackSpeed(0.024)
+      setIsPlaying(true)
+    } else {
+      setWindowStart(DATA_END - YEAR_MS)
+      setPlaybackSpeed(0.008)
+      setIsPlaying(true)
+    }
+  }
+
+  const ticks = mode === 'all' ? TICKS_ALL : mode === '1990' ? TICKS_1990 : []
 
   return (
     <div style={containerStyle}>
@@ -78,8 +96,8 @@ export function Timeline({ events }: Props) {
         <button
           className="btn"
           style={ctrlBtnStyle}
-          title="Reset to 1900"
-          onClick={() => { setIsPlaying(false); setWindowStart(DATA_START) }}
+          title="Reset to start"
+          onClick={() => { setIsPlaying(false); setWindowStart(viewStart) }}
         >
           ⏮
         </button>
@@ -92,36 +110,34 @@ export function Timeline({ events }: Props) {
           {isPlaying ? '⏸' : '⏵'}
         </button>
 
-        <div style={barWrapStyle}>
-          {/* Fill gradient */}
+        <div ref={barRef} style={barWrapStyle} onMouseDown={handleBarMouseDown}>
           <div style={{ ...barFillStyle, width: `${progress * 100}%` }} />
-
-          {/* All-years event ticks */}
-          <canvas ref={canvasRef} style={canvasStyle} />
-
-          {/* Transparent scrubber overlay */}
-          <input
-            type="range"
-            min={0} max={10_000} step={1}
-            value={Math.round(progress * 10_000)}
-            onChange={handleScrub}
-            style={scrubberStyle}
-          />
         </div>
 
       </div>
 
-      {/* Year markers below the bar, aligned to bar width */}
+      {/* Year markers + range selector */}
       <div style={markersRowStyle}>
         <div style={{ width: 84, flexShrink: 0 }} />
         <div style={{ position: 'relative', flex: 1 }}>
-          {[1900, 1910, 1920, 1930, 1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020].map(yr => {
-            const pct = (new Date(`${yr}-01-01T00:00:00Z`).getTime() - DATA_START) / TOTAL_MS * 100
+          {ticks.map(yr => {
+            const pct = (new Date(`${yr}-01-01T00:00:00Z`).getTime() - viewStart) / viewMs * 100
             if (pct < 0 || pct > 100) return null
             return (
               <span key={yr} style={{ ...markerStyle, left: `${pct}%` }}>{yr}</span>
             )
           })}
+        </div>
+        <div style={segmentedStyle}>
+          {(['all', '1990', 'recent'] as ViewMode[]).map(m => (
+            <button
+              key={m}
+              style={{ ...segmentBtnStyle, ...(mode === m ? segmentActivStyle : {}) }}
+              onClick={() => switchMode(m)}
+            >
+              {m === 'all' ? 'ALL TIME' : m === '1990' ? '1990–NOW' : 'RECENT'}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -196,28 +212,9 @@ const barFillStyle: React.CSSProperties = {
   transition:    'width 0.1s linear',
 }
 
-const canvasStyle: React.CSSProperties = {
-  position:      'absolute',
-  inset:         0,
-  width:         '100%',
-  height:        '100%',
-  pointerEvents: 'none',
-}
-
-const scrubberStyle: React.CSSProperties = {
-  position: 'absolute',
-  inset:    0,
-  width:    '100%',
-  height:   '100%',
-  opacity:  0,
-  cursor:   'pointer',
-  margin:   0,
-  padding:  0,
-  zIndex:   1,
-}
-
 const markersRowStyle: React.CSSProperties = {
   display:    'flex',
+  alignItems: 'center',
   gap:        8,
   flexShrink: 0,
 }
@@ -231,4 +228,31 @@ const markerStyle: React.CSSProperties = {
   letterSpacing: 1,
   pointerEvents: 'none',
   whiteSpace:    'nowrap',
+}
+
+const segmentedStyle: React.CSSProperties = {
+  display:      'flex',
+  flexShrink:   0,
+  border:       '1px solid var(--border)',
+  borderRadius: 3,
+  overflow:     'hidden',
+}
+
+const segmentBtnStyle: React.CSSProperties = {
+  fontFamily:    'var(--font-mono)',
+  fontSize:      8,
+  letterSpacing: 1,
+  color:         'var(--muted)',
+  background:    'transparent',
+  border:        'none',
+  borderLeft:    '1px solid var(--border)',
+  padding:       '2px 7px',
+  cursor:        'pointer',
+  textTransform: 'uppercase' as const,
+  whiteSpace:    'nowrap',
+}
+
+const segmentActivStyle: React.CSSProperties = {
+  color:      'var(--accent)',
+  background: 'rgba(0,245,212,0.08)',
 }

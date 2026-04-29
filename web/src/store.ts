@@ -51,7 +51,7 @@ export const DATA_END   = Date.now()
 export { YEAR_MS }
 
 export const useStore = create<State>((set) => ({
-  windowStart:    new Date('1990-01-01T00:00:00Z').getTime(),
+  windowStart:    Date.now() - YEAR_MS,
   windowDuration: THREE_MONTHS_MS,
   isPlaying:      true,
   playbackSpeed:  0.008,
@@ -66,7 +66,7 @@ export const useStore = create<State>((set) => ({
   hazardMagnitude: 6.5,
   hazardYears:     30,
 
-  cameraPos:    [-0.61, 1.46, 1.78],
+  cameraPos:    [-0.197, 1.108, 1.405],
   cameraMatrix: new Array(16).fill(0),
 
   setWindowStart:    (t)  => set({ windowStart: t }),

@@ -251,44 +251,64 @@ export function RightPanel({ events }: Props) {
 
       </div>
 
-      {/* Visible events */}
-      <div className="section-label">Visible Events</div>
-      {recent.length === 0 ? (
-        <div style={emptyStyle}>No events in window</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {recent.map((e, i) => {
-            const col = toCSS(magnitudeColor(e.magnitude))
-            const date = new Date(e.time).toLocaleDateString('en-US', {
-              month: 'short', day: 'numeric', year: 'numeric',
-            })
-            return (
-              <div key={i} className="recent-item">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 52 }}>
-                  <div style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: col, boxShadow: `0 0 5px ${col}` }} />
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: col }}>
-                    M{e.magnitude.toFixed(1)}
+      {/* Visible events — scrolls independently within this section */}
+      <div style={eventsContainerStyle}>
+        <div className="section-label" style={{ flexShrink: 0 }}>Visible Events</div>
+        <div style={eventsListStyle}>
+          {recent.length === 0 ? (
+            <div style={emptyStyle}>No events in window</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {recent.map((e, i) => {
+                const col = toCSS(magnitudeColor(e.magnitude))
+                const date = new Date(e.time).toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric', year: 'numeric',
+                })
+                return (
+                  <div key={i} className="recent-item">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 52 }}>
+                      <div style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: col, boxShadow: `0 0 5px ${col}` }} />
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: col }}>
+                        M{e.magnitude.toFixed(1)}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <div style={recentDateStyle}>{date}</div>
+                      <div style={recentCoordStyle}>{e.lat.toFixed(1)}°, {e.lon.toFixed(1)}° · {e.depth_km.toFixed(0)} km</div>
+                    </div>
                   </div>
-                </div>
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={recentDateStyle}>{date}</div>
-                  <div style={recentCoordStyle}>{e.lat.toFixed(1)}°, {e.lon.toFixed(1)}° · {e.depth_km.toFixed(0)} km</div>
-                </div>
-              </div>
-            )
-          })}
+                )
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
     </div>
   )
 }
 
 const panelStyle: React.CSSProperties = {
-  height:    '100%',
+  height:        '100%',
+  overflowY:     'hidden',
+  overflowX:     'hidden',
+  padding:       16,
+  display:       'flex',
+  flexDirection: 'column',
+}
+
+const eventsContainerStyle: React.CSSProperties = {
+  display:       'flex',
+  flexDirection: 'column',
+  flex:          1,
+  minHeight:     0,
+}
+
+const eventsListStyle: React.CSSProperties = {
+  flex:      1,
+  minHeight: 0,
   overflowY: 'auto',
   overflowX: 'hidden',
-  padding:   16,
 }
 
 const emptyStyle: React.CSSProperties = {

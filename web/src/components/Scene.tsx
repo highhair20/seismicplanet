@@ -40,11 +40,13 @@ export function Scene({ events }: Props) {
   // filter stays in sync without triggering excessive React re-renders.
   const cameraSyncAccum = useRef(0)
   useFrame(({ camera }, delta) => {
-    // Advance playback
+    // Advance playback — read windowStart live to avoid stale-closure overwrite
+    // when the user seeks while playing.
     if (isPlaying) {
-      const advance   = delta * playbackSpeed * YEAR_MS
-      const nextStart = windowStart + advance
-      const maxStart  = DATA_END - windowDuration
+      const windowStart = useStore.getState().windowStart
+      const advance     = delta * playbackSpeed * YEAR_MS
+      const nextStart   = windowStart + advance
+      const maxStart    = DATA_END - windowDuration
 
       if (nextStart >= maxStart) {
         setWindowStart(maxStart)
@@ -73,8 +75,8 @@ export function Scene({ events }: Props) {
       <OrbitControls
         enableDamping
         dampingFactor={0.08}
-        minDistance={1.05}
-        maxDistance={8}
+        minDistance={1.2}
+        maxDistance={2.5}
         rotateSpeed={0.5}
       />
 

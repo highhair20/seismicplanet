@@ -37,7 +37,7 @@ export function App() {
       {/* ── 3D Globe ───────────────────────────────────────────── */}
       <main style={mapStyle}>
         <Canvas
-          camera={{ position: [-0.61, 1.46, 1.78], fov: 45, near: 0.1, far: 1000 }}
+          camera={{ position: [-0.197, 1.108, 1.405], fov: 45, near: 0.1, far: 1000 }}
           gl={{ antialias: true, alpha: false }}
           style={{ position: 'absolute', inset: 0 }}
         >

@@ -52,7 +52,9 @@ const fragmentShader = /* glsl */`
 
     // Age fade: newest (age=1) fully opaque, oldest (age=0) nearly gone.
     // pow curve keeps mid-age events readable and makes the fade feel natural.
-    float ageFade = pow(vAge, 1.5);
+    // Scale age so the fade completes in 50% of the window (events older than
+    // half the window are fully transparent).
+    float ageFade = pow(vAge, 6.0);
 
     float alpha = disc * ageFade * 0.90 * vSideFade;
 
