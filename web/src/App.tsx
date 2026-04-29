@@ -4,6 +4,47 @@ import { Timeline } from './ui/Timeline'
 import { LeftPanel } from './ui/LeftPanel'
 import { RightPanel } from './ui/RightPanel'
 import { useEarthquakeData } from './hooks/useEarthquakeData'
+import { useStore } from './store'
+
+function UsgsLink() {
+  const windowStart    = useStore(s => s.windowStart)
+  const windowDuration = useStore(s => s.windowDuration)
+  const minMagnitude   = useStore(s => s.minMagnitude)
+  const maxDepth       = useStore(s => s.maxDepth)
+
+  // USGS map uses escape(JSON.stringify(settings)) as the URL hash.
+  // The datetime format used by the USGS UI is "YYYY-MM-DD HH:MM:SS" (UTC, space not T).
+  const fmtUsgs = (ms: number) => new Date(ms).toISOString().replace('T', ' ').slice(0, 19)
+
+  const settings = {
+    feed:              'search',
+    sort:              'newest',
+    basemap:           'grayscale',
+    timezone:          'utc',
+    viewModes:         ['list', 'map'],
+    listFormat:        'default',
+    autoUpdate:        false,
+    search: {
+      id: 'search',
+      params: {
+        starttime:    fmtUsgs(windowStart),
+        endtime:      fmtUsgs(windowStart + windowDuration),
+        minmagnitude: minMagnitude.toFixed(1),
+        maxdepth:     String(maxDepth),
+        orderby:      'time',
+      },
+    },
+  }
+
+  const href = `https://earthquake.usgs.gov/earthquakes/map/#${encodeURIComponent(JSON.stringify(settings))}`
+
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={usgsLinkStyle}>
+      <span style={usgsLogoStyle}>USGS</span>
+      <span style={usgsSubStyle}>EARTHQUAKE CATALOG ↗</span>
+    </a>
+  )
+}
 
 export function App() {
   const events = useEarthquakeData()
@@ -13,7 +54,7 @@ export function App() {
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <header style={headerStyle}>
-        <div style={logoStyle}>USGS · SEISMIC</div>
+        <UsgsLink />
 
         <div style={{ textAlign: 'center' }}>
           <h1 style={titleStyle}>SEISMIC PLANET</h1>
@@ -95,11 +136,29 @@ const accentLineStyle: React.CSSProperties = {
   pointerEvents: 'none',
 }
 
-const logoStyle: React.CSSProperties = {
+const usgsLinkStyle: React.CSSProperties = {
+  display:        'flex',
+  flexDirection:  'column',
+  alignItems:     'flex-start',
+  textDecoration: 'none',
+  gap:            2,
+}
+
+const usgsLogoStyle: React.CSSProperties = {
   fontFamily:    'var(--font-mono)',
-  fontSize:      11,
+  fontSize:      15,
+  fontWeight:    900,
   letterSpacing: 4,
   color:         'var(--accent)',
+  textTransform: 'uppercase' as const,
+  lineHeight:    1,
+}
+
+const usgsSubStyle: React.CSSProperties = {
+  fontFamily:    'var(--font-mono)',
+  fontSize:      8,
+  letterSpacing: 2,
+  color:         'var(--muted)',
   textTransform: 'uppercase' as const,
 }
 
