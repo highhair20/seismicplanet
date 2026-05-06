@@ -14,5 +14,15 @@ web/node_modules/
 dist/
 web/dist/
 
+# Terraform
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/terraform.tfvars
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+
 # OS
 .DS_Store
