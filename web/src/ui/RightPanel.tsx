@@ -47,6 +47,7 @@ export function RightPanel({ events }: Props) {
   const setHazardMagnitude = useStore(s => s.setHazardMagnitude)
   const setHazardYears     = useStore(s => s.setHazardYears)
   const setWindowStart     = useStore(s => s.setWindowStart)
+  const setSelectedEvent   = useStore(s => s.setSelectedEvent)
   const cameraPos          = useStore(s => s.cameraPos)
   const cameraMatrix       = useStore(s => s.cameraMatrix)
 
@@ -265,7 +266,15 @@ export function RightPanel({ events }: Props) {
                   month: 'short', day: 'numeric', year: 'numeric',
                 })
                 return (
-                  <div key={i} className="recent-item">
+                  <div
+                    key={i}
+                    className="recent-item"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setSelectedEvent(e)
+                      setIsPlaying(false)
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 52 }}>
                       <div style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: col, boxShadow: `0 0 5px ${col}` }} />
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: col }}>
@@ -274,7 +283,10 @@ export function RightPanel({ events }: Props) {
                     </div>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
                       <div style={recentDateStyle}>{date}</div>
-                      <div style={recentCoordStyle}>{e.lat.toFixed(1)}°, {e.lon.toFixed(1)}° · {e.depth_km.toFixed(0)} km</div>
+                      <div style={recentCoordStyle}>
+                        {e.place ? e.place : `${e.lat.toFixed(1)}°, ${e.lon.toFixed(1)}°`}
+                      </div>
+                      <div style={recentCoordStyle}>{e.depth_km.toFixed(0)} km deep</div>
                     </div>
                   </div>
                 )

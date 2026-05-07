@@ -4,5 +4,6 @@ export interface EarthquakeEvent {
   lon:       number
   depth_km:  number
   magnitude: number
+  place?:    string
 }
 

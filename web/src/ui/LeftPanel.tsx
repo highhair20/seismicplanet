@@ -73,16 +73,16 @@ export function LeftPanel({ events }: Props) {
           <span className="lbl">Events</span>
         </div>
         <div className="stat-box">
-          <span className="val">{maxMag !== null ? maxMag.toFixed(1) : '—'}</span>
-          <span className="lbl">Max Mag</span>
+          <span className="val">{avgDep !== null ? Math.round(avgDep) : '—'}</span>
+          <span className="lbl">Avg Depth km</span>
         </div>
         <div className="stat-box">
           <span className="val">{avgMag !== null ? avgMag.toFixed(1) : '—'}</span>
           <span className="lbl">Avg Mag</span>
         </div>
         <div className="stat-box">
-          <span className="val">{avgDep !== null ? Math.round(avgDep) : '—'}</span>
-          <span className="lbl">Avg Depth km</span>
+          <span className="val">{maxMag !== null ? maxMag.toFixed(1) : '—'}</span>
+          <span className="lbl">Max Mag</span>
         </div>
       </div>
 

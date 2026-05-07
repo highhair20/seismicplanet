@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>California Seismic Activity</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@100;300;600;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #050810;
+    --panel: #090e1a;
+    --border: #1a2540;
+    --accent: #00f5d4;
+    --warn: #ff6b35;
+    --danger: #ff1744;
+    --text: #c8d8f0;
+    --muted: #4a6080;
+    --glow: rgba(0,245,212,0.15);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 56px 1fr 120px;
+    grid-template-columns: 260px 1fr 260px;
+    grid-template-areas:
+      "header header header"
+      "left   map    right"
+      "footer footer footer";
+  }
+
+  /* HEADER */
+  header {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, #050810 0%, #07101e 50%, #050810 100%);
+    position: relative;
+    z-index: 10;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.6;
+  }
+  .logo {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .title-center {
+    text-align: center;
+  }
+  .title-center h1 {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .title-center p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .header-right {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+  }
+  #live-count { color: var(--accent); font-size: 18px; font-weight: 600; display: block; }
+
+  /* PANELS */
+  .panel-left  { grid-area: left;  border-right: 1px solid var(--border); }
+  .panel-right { grid-area: right; border-left:  1px solid var(--border); }
+  .panel-left, .panel-right {
+    background: var(--panel);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .panel-left::-webkit-scrollbar,
+  .panel-right::-webkit-scrollbar { width: 3px; }
+  .panel-left::-webkit-scrollbar-thumb,
+  .panel-right::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .section-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  /* Magnitude legend */
+  .mag-legend { display: flex; flex-direction: column; gap: 6px; }
+  .mag-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+  .mag-dot {
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  /* Stats */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-box {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    text-align: center;
+  }
+  .stat-box .val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 20px;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+  }
+  .stat-box .lbl {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* Recent list */
+  .recent-list { display: flex; flex-direction: column; gap: 4px; }
+  .recent-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 11px;
+  }
+  .recent-item:hover { border-color: var(--accent); background: var(--glow); }
+  .recent-mag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 30px;
+    text-align: center;
+  }
+  .recent-info { flex: 1; overflow: hidden; }
+  .recent-place { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+  .recent-time  { color: var(--muted); font-size: 9px; font-family: 'Share Tech Mono', monospace; }
+
+  /* Controls panel */
+  .control-group { display: flex; flex-direction: column; gap: 8px; }
+  label.ctrl-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    cursor: pointer;
+  }
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+  .toggle {
+    position: relative; width: 32px; height: 17px;
+    background: var(--border); border-radius: 9px; cursor: pointer; transition: background 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute; top: 2px; left: 2px;
+    width: 13px; height: 13px;
+    background: #fff; border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(15px); }
+
+  /* playback buttons */
+  .play-controls { display: flex; gap: 6px; }
+  .btn {
+    flex: 1;
+    padding: 7px 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .btn:hover, .btn.active { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+
+  /* MAP */
+  #map-container {
+    grid-area: map;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 40%, #060d1a 0%, #020509 100%);
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Tooltip */
+  #tooltip {
+    position: absolute;
+    background: rgba(5,8,16,0.95);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 11px;
+    pointer-events: none;
+    display: none;
+    z-index: 100;
+    max-width: 200px;
+    box-shadow: 0 0 20px rgba(0,245,212,0.2);
+  }
+  #tooltip .tt-mag { font-family: 'Share Tech Mono', monospace; font-size: 22px; color: var(--accent); line-height: 1; }
+  #tooltip .tt-place { color: #fff; margin: 4px 0 2px; font-size: 12px; font-weight: 600; }
+  #tooltip .tt-time, #tooltip .tt-depth { color: var(--muted); font-size: 10px; font-family: 'Share Tech Mono', monospace; }
+
+  /* FOOTER / timeline */
+  footer {
+    grid-area: footer;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    padding: 10px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .timeline-header { display: flex; justify-content: space-between; align-items: center; }
+  .timeline-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 3px; }
+  #current-date { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--accent); }
+  #timeline-bar {
+    position: relative;
+    height: 40px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  #timeline-fill {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(0,245,212,0.08), rgba(0,245,212,0.2));
+    border-right: 2px solid var(--accent);
+    transition: width 0.1s linear;
+    box-shadow: 2px 0 12px var(--accent);
+  }
+  #timeline-events {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  }
+  .tl-tick {
+    position: absolute; bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+    opacity: 0.7;
+  }
+
+  /* Loading */
+  #loading {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bg);
+    z-index: 200;
+    gap: 16px;
+  }
+  #loading .ld-title { font-size: 13px; letter-spacing: 6px; color: var(--accent); text-transform: uppercase; font-family: 'Share Tech Mono', monospace; }
+  .ld-bar { width: 240px; height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+  .ld-bar-fill { height: 100%; background: var(--accent); border-radius: 1px; animation: ldAnim 1.8s ease-in-out infinite; }
+  @keyframes ldAnim { 0%{width:0;margin-left:0} 50%{width:100%;margin-left:0} 100%{width:0;margin-left:100%} }
+  #loading .ld-sub { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; }
+
+  /* Pulse animation for new quakes */
+  @keyframes ripple {
+    0%   { transform: scale(1); opacity: 1; }
+    100% { transform: scale(3); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">USGS · SEISMIC</div>
+  <div class="title-center">
+    <h1>California Earthquake Monitor</h1>
+    <p>30-DAY SEISMIC TIME SERIES · REAL-TIME DATA</p>
+  </div>
+  <div class="header-right">
+    <span id="live-count">—</span>
+    EVENTS LOADED
+  </div>
+</header>
+
+<!-- LEFT PANEL -->
+<aside class="panel-left">
+  <div class="section-label">Magnitude Scale</div>
+  <div class="mag-legend">
+    <div class="mag-row"><div class="mag-dot" style="width:6px;height:6px;background:#4fc3f7;color:#4fc3f7"></div><span>M &lt; 2.0 &nbsp;Micro</span></div>
+    <div class="mag-row"><div class="mag-dot" style="width:9px;height:9px;background:#81c784;color:#81c784"></div><span>M 2.0–3.9 &nbsp;Minor</span></div>
+    <div class="mag-row"><div class="mag-dot" style="width:13px;height:13px;background:#fff176;color:#fff176"></div><span>M 4.0–4.9 &nbsp;Light</span></div>
+    <div class="mag-row"><div class="mag-dot" style="width:17px;height:17px;background:#ffb74d;color:#ffb74d"></div><span>M 5.0–5.9 &nbsp;Moderate</span></div>
+    <div class="mag-row"><div class="mag-dot" style="width:22px;height:22px;background:#ff7043;color:#ff7043"></div><span>M 6.0–6.9 &nbsp;Strong</span></div>
+    <div class="mag-row"><div class="mag-dot" style="width:28px;height:28px;background:#e53935;color:#e53935"></div><span>M 7.0+ &nbsp;&nbsp;&nbsp;&nbsp;Major</span></div>
+  </div>
+
+  <div class="section-label" style="margin-top:8px">Statistics</div>
+  <div class="stat-grid">
+    <div class="stat-box"><span class="val" id="stat-total">—</span><span class="lbl">Total Events</span></div>
+    <div class="stat-box"><span class="val" id="stat-max">—</span><span class="lbl">Max Magnitude</span></div>
+    <div class="stat-box"><span class="val" id="stat-avg">—</span><span class="lbl">Avg Magnitude</span></div>
+    <div class="stat-box"><span class="val" id="stat-depth">—</span><span class="lbl">Avg Depth km</span></div>
+  </div>
+
+  <div class="section-label" style="margin-top:8px">Depth Guide</div>
+  <div style="font-size:10px;color:var(--muted);line-height:1.8;">
+    <div>🔴 Shallow &nbsp;0–70 km</div>
+    <div>🟡 Intermediate &nbsp;70–300 km</div>
+    <div>🔵 Deep &nbsp;300+ km</div>
+    <div style="margin-top:6px;font-size:9px;">Bar height represents depth (inverted — taller = shallower)</div>
+  </div>
+</aside>
+
+<!-- MAP -->
+<main id="map-container">
+  <canvas id="quake-canvas"></canvas>
+  <div id="tooltip">
+    <div class="tt-mag" id="tt-mag"></div>
+    <div class="tt-place" id="tt-place"></div>
+    <div class="tt-time"  id="tt-time"></div>
+    <div class="tt-depth" id="tt-depth"></div>
+  </div>
+  <div id="loading">
+    <div class="ld-title">Fetching Seismic Data</div>
+    <div class="ld-bar"><div class="ld-bar-fill"></div></div>
+    <div class="ld-sub" id="ld-status">Connecting to USGS...</div>
+  </div>
+</main>
+
+<!-- RIGHT PANEL -->
+<aside class="panel-right">
+  <div class="section-label">Playback</div>
+  <div class="control-group">
+    <div class="play-controls">
+      <button class="btn" id="btn-reset" onclick="resetPlayback()">⏮ RESET</button>
+      <button class="btn active" id="btn-play" onclick="togglePlay()">⏵ PLAY</button>
+    </div>
+    <label class="ctrl-label">PLAYBACK SPEED</label>
+    <input type="range" id="speed-slider" min="1" max="20" value="6">
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;">
+      <span>SLOW</span><span id="speed-val">6×</span><span>FAST</span>
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top:4px">Display</div>
+  <div class="control-group">
+    <div class="toggle-row">
+      <span>Show micro quakes (&lt;M2)</span>
+      <div class="toggle on" id="tog-micro" onclick="this.classList.toggle('on');redraw()"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Depth bars</span>
+      <div class="toggle on" id="tog-depth" onclick="this.classList.toggle('on');redraw()"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Glow effects</span>
+      <div class="toggle on" id="tog-glow" onclick="this.classList.toggle('on');redraw()"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Fault lines</span>
+      <div class="toggle on" id="tog-faults" onclick="this.classList.toggle('on');redraw()"></div>
+    </div>
+    <label class="ctrl-label" style="margin-top:4px">MIN MAGNITUDE FILTER</label>
+    <input type="range" id="mag-filter" min="0" max="5" step="0.5" value="0">
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;">
+      <span>ALL</span><span id="mag-filter-val">M 0.0+</span><span>M 5.0+</span>
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top:4px">Recent Significant</div>
+  <div class="recent-list" id="recent-list"></div>
+</aside>
+
+<!-- FOOTER timeline -->
+<footer>
+  <div class="timeline-header">
+    <span class="timeline-label">TIME SERIES</span>
+    <span id="current-date">—</span>
+    <span class="timeline-label" id="visible-count">—</span>
+  </div>
+  <div id="timeline-bar">
+    <div id="timeline-fill" style="width:0%"></div>
+    <div id="timeline-events"></div>
+  </div>
+</footer>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const CA_BOUNDS = { minLat:32.5, maxLat:42.0, minLon:-124.5, maxLon:-114.1 };
+const USGS_URL = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson`
+  + `&starttime=${new Date(Date.now()-30*864e5).toISOString().split('T')[0]}`
+  + `&endtime=${new Date().toISOString().split('T')[0]}`
+  + `&minlatitude=${CA_BOUNDS.minLat}&maxlatitude=${CA_BOUNDS.maxLat}`
+  + `&minlongitude=${CA_BOUNDS.minLon}&maxlongitude=${CA_BOUNDS.maxLon}`
+  + `&minmagnitude=0&orderby=time`;
+
+// Major CA fault lines [lon,lat pairs]
+const FAULTS = [
+  // San Andreas (simplified spine)
+  [[-124.1,40.5],[-122.5,38.0],[-121.5,36.9],[-120.5,35.8],[-119.5,34.5],[-117.8,33.9],[-116.5,33.2]],
+  // Hayward
+  [[-122.3,37.8],[-122.0,37.5],[-121.8,37.2]],
+  // Calaveras
+  [[-121.8,37.5],[-121.5,37.0],[-121.3,36.7]],
+  // Elsinore
+  [[-117.8,33.7],[-117.2,33.2],[-116.5,32.7]],
+  // Garlock
+  [[-119.5,35.3],[-118.5,35.0],[-117.8,34.8],[-117.0,34.8]],
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let quakes = [], filteredQ = [], playing = true, playheadIdx = 0;
+let animFrame, lastTime = 0, playSpeed = 6, minMag = 0;
+let canvasW, canvasH;
+const canvas = document.getElementById('quake-canvas');
+const ctx = canvas.getContext('2d');
+
+// ─── PROJECT lon/lat → canvas px ─────────────────────────────────────────────
+function lonToX(lon) { return (lon - CA_BOUNDS.minLon) / (CA_BOUNDS.maxLon - CA_BOUNDS.minLon) * canvasW; }
+function latToY(lat) { return (1 - (lat - CA_BOUNDS.minLat) / (CA_BOUNDS.maxLat - CA_BOUNDS.minLat)) * canvasH; }
+
+// ─── MAGNITUDE → visual ───────────────────────────────────────────────────────
+function magColor(m) {
+  if (m < 2)   return '#4fc3f7';
+  if (m < 4)   return '#81c784';
+  if (m < 5)   return '#fff176';
+  if (m < 6)   return '#ffb74d';
+  if (m < 7)   return '#ff7043';
+  return '#e53935';
+}
+function magRadius(m) { return Math.max(2, 1.8 * Math.pow(2, m - 1)); }
+
+// ─── FETCH DATA ───────────────────────────────────────────────────────────────
+async function fetchData() {
+  try {
+    document.getElementById('ld-status').textContent = 'Querying USGS earthquake catalog...';
+    const res = await fetch(USGS_URL);
+    const json = await res.json();
+    quakes = json.features.map(f => ({
+      lon:   f.geometry.coordinates[0],
+      lat:   f.geometry.coordinates[1],
+      depth: f.geometry.coordinates[2],
+      mag:   f.properties.mag || 0,
+      time:  f.properties.time,
+      place: f.properties.place || 'Unknown',
+    })).sort((a,b) => a.time - b.time);
+    document.getElementById('ld-status').textContent = `Loaded ${quakes.length} events. Rendering...`;
+    setTimeout(() => {
+      document.getElementById('loading').style.display = 'none';
+      init();
+    }, 600);
+  } catch(e) {
+    document.getElementById('ld-status').textContent = 'Error fetching data. Check network.';
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  applyFilter();
+  updateStats();
+  buildTimeline();
+  buildRecentList();
+  resize();
+  playheadIdx = 0;
+  loop(0);
+}
+
+function applyFilter() {
+  const showMicro = document.getElementById('tog-micro').classList.contains('on');
+  filteredQ = quakes.filter(q => {
+    if (!showMicro && q.mag < 2) return false;
+    if (q.mag < minMag) return false;
+    return true;
+  });
+  document.getElementById('live-count').textContent = filteredQ.length.toLocaleString();
+}
+
+function updateStats() {
+  const mags = quakes.map(q=>q.mag);
+  document.getElementById('stat-total').textContent = quakes.length.toLocaleString();
+  document.getElementById('stat-max').textContent   = Math.max(...mags).toFixed(1);
+  document.getElementById('stat-avg').textContent   = (mags.reduce((a,b)=>a+b,0)/mags.length).toFixed(1);
+  document.getElementById('stat-depth').textContent = Math.round(quakes.reduce((a,q)=>a+q.depth,0)/quakes.length);
+}
+
+function buildTimeline() {
+  const bar = document.getElementById('timeline-events');
+  bar.innerHTML = '';
+  if (!filteredQ.length) return;
+  const t0 = filteredQ[0].time, t1 = filteredQ[filteredQ.length-1].time, span = t1 - t0 || 1;
+  filteredQ.forEach(q => {
+    const pct = (q.time - t0) / span * 100;
+    const h   = Math.max(4, Math.min(38, magRadius(q.mag) * 2));
+    const el  = document.createElement('div');
+    el.className = 'tl-tick';
+    el.style.cssText = `left:${pct}%;height:${h}px;background:${magColor(q.mag)};bottom:0;opacity:0.6;`;
+    bar.appendChild(el);
+  });
+}
+
+function buildRecentList() {
+  const sig = [...quakes].filter(q=>q.mag>=3).sort((a,b)=>b.mag-a.mag).slice(0,12);
+  const list = document.getElementById('recent-list');
+  list.innerHTML = '';
+  sig.forEach(q => {
+    const div = document.createElement('div');
+    div.className = 'recent-item';
+    const d = new Date(q.time);
+    div.innerHTML = `<div class="recent-mag" style="color:${magColor(q.mag)}">${q.mag.toFixed(1)}</div>
+      <div class="recent-info">
+        <div class="recent-place">${q.place}</div>
+        <div class="recent-time">${d.toLocaleDateString()} ${d.toLocaleTimeString()}</div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ─── RESIZE ───────────────────────────────────────────────────────────────────
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvasW = canvas.width  = rect.width;
+  canvasH = canvas.height = rect.height;
+  redraw();
+}
+window.addEventListener('resize', resize);
+
+// ─── DRAW ─────────────────────────────────────────────────────────────────────
+function drawFaults() {
+  const showFaults = document.getElementById('tog-faults').classList.contains('on');
+  if (!showFaults) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,100,50,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,6]);
+  FAULTS.forEach(fault => {
+    ctx.beginPath();
+    fault.forEach(([lon,lat],i) => {
+      const x = lonToX(lon), y = latToY(lat);
+      i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    });
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawGrid() {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(26,37,64,0.6)';
+  ctx.lineWidth = 0.5;
+  // lat lines
+  for (let lat=33;lat<=42;lat++) {
+    const y = latToY(lat);
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvasW,y); ctx.stroke();
+    ctx.fillStyle='rgba(74,96,128,0.5)';
+    ctx.font='9px Share Tech Mono';
+    ctx.fillText(lat+'°N',3,y-2);
+  }
+  // lon lines
+  for (let lon=-124;lon<=-114;lon+=2) {
+    const x = lonToX(lon);
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvasH); ctx.stroke();
+    ctx.fillStyle='rgba(74,96,128,0.5)';
+    ctx.font='9px Share Tech Mono';
+    ctx.fillText(lon+'°',x+2,canvasH-4);
+  }
+  ctx.restore();
+}
+
+function drawQuakes(upTo) {
+  const showDepth = document.getElementById('tog-depth').classList.contains('on');
+  const showGlow  = document.getElementById('tog-glow').classList.contains('on');
+  const now = Date.now();
+
+  for (let i=0;i<upTo;i++) {
+    const q = filteredQ[i];
+    const x = lonToX(q.lon), y = latToY(q.lat);
+    const r = magRadius(q.mag);
+    const col = magColor(q.mag);
+    const age = upTo - i; // how many quakes ago
+    const freshness = Math.max(0, 1 - age/40);
+
+    ctx.save();
+
+    // Depth bar (3D effect)
+    if (showDepth && q.depth > 0) {
+      const barH = Math.min(canvasH*0.12, (1 - Math.min(q.depth,300)/300) * 60 + 4);
+      const alpha = 0.15 + freshness * 0.2;
+      ctx.fillStyle = col.replace(')', `,${alpha})`).replace('rgb','rgba').replace('#','rgba(') ;
+      // simpler approach:
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = col;
+      ctx.fillRect(x - r*0.4, y - barH, r*0.8, barH);
+      ctx.globalAlpha = 1;
+    }
+
+    // Glow
+    if (showGlow && r > 4) {
+      const grad = ctx.createRadialGradient(x,y,0,x,y,r*3);
+      grad.addColorStop(0, col + 'aa');
+      grad.addColorStop(1, col + '00');
+      ctx.globalAlpha = 0.3 + freshness * 0.4;
+      ctx.beginPath(); ctx.arc(x,y,r*3,0,Math.PI*2);
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // Core circle
+    ctx.globalAlpha = 0.4 + freshness * 0.6;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle = col; ctx.fill();
+
+    // Ring for recent
+    if (freshness > 0.5) {
+      ctx.globalAlpha = freshness * 0.8;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x,y,r+2,0,Math.PI*2); ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // Pulse ring on latest
+  if (upTo > 0) {
+    const q = filteredQ[upTo-1];
+    const x = lonToX(q.lon), y = latToY(q.lat);
+    const r = magRadius(q.mag);
+    const phase = (now % 1200) / 1200;
+    ctx.save();
+    ctx.globalAlpha = (1-phase)*0.7;
+    ctx.strokeStyle = magColor(q.mag);
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x,y,r + phase*30,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function redraw(upTo) {
+  if (upTo === undefined) upTo = playheadIdx;
+  ctx.clearRect(0,0,canvasW,canvasH);
+  drawGrid();
+  drawFaults();
+  drawQuakes(upTo);
+}
+
+// ─── LOOP ─────────────────────────────────────────────────────────────────────
+function loop(ts) {
+  if (playing && filteredQ.length) {
+    const dt = ts - lastTime;
+    if (dt > 50) { // throttle
+      lastTime = ts;
+      playheadIdx = Math.min(playheadIdx + Math.ceil(playSpeed / 3), filteredQ.length);
+      if (playheadIdx >= filteredQ.length) {
+        // hold at end
+        playing = false;
+        document.getElementById('btn-play').textContent = '⏵ PLAY';
+        document.getElementById('btn-play').classList.remove('active');
+      }
+      updateHUD();
+      redraw(playheadIdx);
+    }
+  }
+  animFrame = requestAnimationFrame(loop);
+}
+
+function updateHUD() {
+  if (!filteredQ.length || playheadIdx === 0) return;
+  const q = filteredQ[Math.min(playheadIdx-1, filteredQ.length-1)];
+  const d = new Date(q.time);
+  document.getElementById('current-date').textContent = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + '  ' + d.toLocaleTimeString();
+  const pct = filteredQ.length > 1 ? (playheadIdx / filteredQ.length * 100) : 100;
+  document.getElementById('timeline-fill').style.width = pct + '%';
+  document.getElementById('visible-count').textContent = `${playheadIdx} / ${filteredQ.length} events`;
+}
+
+// ─── CONTROLS ─────────────────────────────────────────────────────────────────
+function togglePlay() {
+  if (playheadIdx >= filteredQ.length) resetPlayback();
+  playing = !playing;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = playing ? '⏸ PAUSE' : '⏵ PLAY';
+  btn.classList.toggle('active', playing);
+}
+function resetPlayback() {
+  playheadIdx = 0; playing = true;
+  document.getElementById('btn-play').textContent = '⏸ PAUSE';
+  document.getElementById('btn-play').classList.add('active');
+  document.getElementById('timeline-fill').style.width = '0%';
+}
+
+document.getElementById('speed-slider').addEventListener('input', function() {
+  playSpeed = +this.value;
+  document.getElementById('speed-val').textContent = this.value + '×';
+});
+document.getElementById('mag-filter').addEventListener('input', function() {
+  minMag = +this.value;
+  document.getElementById('mag-filter-val').textContent = 'M ' + minMag.toFixed(1) + '+';
+  applyFilter();
+  buildTimeline();
+  buildRecentList();
+  playheadIdx = Math.min(playheadIdx, filteredQ.length);
+  redraw();
+});
+
+// Timeline click to seek
+document.getElementById('timeline-bar').addEventListener('click', function(e) {
+  const rect = this.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  playheadIdx = Math.round(pct * filteredQ.length);
+  playing = false;
+  document.getElementById('btn-play').textContent = '⏵ PLAY';
+  document.getElementById('btn-play').classList.remove('active');
+  updateHUD();
+  redraw(playheadIdx);
+});
+
+// Tooltip on hover
+canvas.addEventListener('mousemove', function(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let found = null, foundDist = Infinity;
+  for (let i=0;i<playheadIdx;i++) {
+    const q = filteredQ[i];
+    const x = lonToX(q.lon), y = latToY(q.lat);
+    const r = magRadius(q.mag);
+    const d = Math.hypot(mx-x, my-y);
+    if (d < Math.max(r+4, 10) && d < foundDist) { found=q; foundDist=d; }
+  }
+  const tt = document.getElementById('tooltip');
+  if (found) {
+    tt.style.display = 'block';
+    tt.style.left = (e.clientX - rect.left + 14) + 'px';
+    tt.style.top  = (e.clientY - rect.top  - 10) + 'px';
+    document.getElementById('tt-mag').textContent   = 'M ' + found.mag.toFixed(1);
+    document.getElementById('tt-mag').style.color   = magColor(found.mag);
+    document.getElementById('tt-place').textContent = found.place;
+    document.getElementById('tt-time').textContent  = new Date(found.time).toLocaleString();
+    document.getElementById('tt-depth').textContent = 'Depth: ' + found.depth.toFixed(1) + ' km';
+  } else {
+    tt.style.display = 'none';
+  }
+});
+canvas.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display='none'; });
+
+// ─── START ────────────────────────────────────────────────────────────────────
+fetchData();
+</script>
+</body>
+</html>

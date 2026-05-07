@@ -48,7 +48,7 @@ from .storage import (
               help="Earliest year to include in the archive.")
 @click.option("--min-magnitude",    default=2.5,   show_default=True,
               help="Minimum magnitude for the Parquet archive.")
-@click.option("--export-magnitude", default=4.0,   show_default=True,
+@click.option("--export-magnitude", default=2.5,   show_default=True,
               help="Minimum magnitude for web JSON export (smaller files).")
 @click.option("--data-dir",         default="data",          show_default=True, type=click.Path())
 @click.option("--out-dir",          default="web/public/data", show_default=True, type=click.Path())
@@ -212,12 +212,13 @@ def _export(data_path: Path, out_path: Path, min_magnitude: float) -> None:
             pl.read_parquet(pf)
             .filter(pl.col("magnitude") >= min_magnitude)
             .sort("time")
-            .select(["time", "lat", "lon", "depth_km", "magnitude"])
+            .select(["time", "lat", "lon", "depth_km", "magnitude", "place"])
         )
 
         rows = [
             [r["time"], round(r["lat"], 4), round(r["lon"], 4),
-             round(r["depth_km"] or 0, 1), round(r["magnitude"], 1)]
+             round(r["depth_km"] or 0, 1), round(r["magnitude"], 1),
+             r["place"] or ""]
             for r in df.iter_rows(named=True)
         ]
 

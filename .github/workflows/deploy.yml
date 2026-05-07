@@ -1,0 +1,58 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # required for OIDC
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Set this in GitHub → Settings → Secrets and variables → Actions
+          # Value: terraform output github_deploy_role_arn
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Sync site to S3
+        run: |
+          # Exclude yearly data JSON — those are owned by the pipeline
+          aws s3 sync web/dist/ s3://seismicplanet/ \
+            --delete \
+            --exclude "data/[0-9]*.json" \
+            --cache-control "public, max-age=86400"
+
+          # index.html should not be cached aggressively
+          aws s3 cp web/dist/index.html s3://seismicplanet/index.html \
+            --cache-control "public, max-age=60"
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/index.html" "/assets/*"

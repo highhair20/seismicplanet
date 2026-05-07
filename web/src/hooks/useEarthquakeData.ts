@@ -40,11 +40,16 @@ export function useEarthquakeData(): EarthquakeEvent[] {
       missing.map(y =>
         fetch(`/data/${y}.json`)
           .then(r => r.ok ? r.json() : [])
-          .then((rows: number[][]) => {
+          .then((rows: (number | string)[][]) => {
             yearCache.set(
               y,
-              rows.map(([time, lat, lon, depth_km, magnitude]) => ({
-                time, lat, lon, depth_km, magnitude,
+              rows.map(([time, lat, lon, depth_km, magnitude, place]) => ({
+                time:      time      as number,
+                lat:       lat       as number,
+                lon:       lon       as number,
+                depth_km:  depth_km  as number,
+                magnitude: magnitude as number,
+                place:     (place as string) || undefined,
               })),
             )
           })

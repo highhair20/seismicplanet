@@ -3,6 +3,7 @@ import { Scene } from './components/Scene'
 import { Timeline } from './ui/Timeline'
 import { LeftPanel } from './ui/LeftPanel'
 import { RightPanel } from './ui/RightPanel'
+import { EventWindow } from './ui/EventWindow'
 import { useEarthquakeData } from './hooks/useEarthquakeData'
 import { useStore } from './store'
 
@@ -76,7 +77,7 @@ export function App() {
       </aside>
 
       {/* ── 3D Globe ───────────────────────────────────────────── */}
-      <main style={mapStyle}>
+      <main id="globe-container" style={mapStyle}>
         <Canvas
           camera={{ position: [-0.197, 1.108, 1.405], fov: 45, near: 0.1, far: 1000 }}
           gl={{ antialias: true, alpha: false }}
@@ -95,6 +96,9 @@ export function App() {
       <footer style={footerStyle}>
         <Timeline events={events} />
       </footer>
+
+      {/* ── Event detail window ──────────────────────────────────── */}
+      <EventWindow />
 
     </div>
   )

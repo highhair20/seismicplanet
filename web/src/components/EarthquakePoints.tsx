@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
+import { useThree } from '@react-three/fiber'
 import { EarthquakeEvent } from '../types'
 import { toCartesian } from '../lib/coordinates'
 import { magnitudeColor, pointSize } from '../lib/colors'
@@ -67,8 +68,18 @@ interface Props {
 }
 
 export function EarthquakePoints({ events }: Props) {
-  const windowStart    = useStore(s => s.windowStart)
-  const windowDuration = useStore(s => s.windowDuration)
+  const windowStart      = useStore(s => s.windowStart)
+  const windowDuration   = useStore(s => s.windowDuration)
+  const setSelectedEvent = useStore(s => s.setSelectedEvent)
+  const setIsPlaying     = useStore(s => s.setIsPlaying)
+
+  const { raycaster } = useThree()
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
+
+  // Tight threshold so clicks land on the intended point, not a neighbour
+  useEffect(() => {
+    if (raycaster.params.Points) raycaster.params.Points.threshold = 0.01
+  }, [raycaster])
 
   const { positions, colors, sizes, ages } = useMemo(() => {
     const n         = events.length
@@ -145,6 +156,30 @@ export function EarthquakePoints({ events }: Props) {
   if (events.length === 0) return null
 
   return (
-    <points geometry={geometry} material={material} renderOrder={4} />
+    <points
+      geometry={geometry}
+      material={material}
+      renderOrder={4}
+      onPointerDown={(e) => {
+        pointerDownPos.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
+      }}
+      onClick={(e) => {
+        // Ignore if the pointer moved — user was rotating the globe
+        const down = pointerDownPos.current
+        if (down) {
+          const dx = e.nativeEvent.clientX - down.x
+          const dy = e.nativeEvent.clientY - down.y
+          if (dx * dx + dy * dy > 25) return
+        }
+
+        if (e.index == null) return
+        const event = events[e.index]
+        if (!event) return
+
+        setSelectedEvent(event, { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY })
+        setIsPlaying(false)
+        e.stopPropagation()
+      }}
+    />
   )
 }

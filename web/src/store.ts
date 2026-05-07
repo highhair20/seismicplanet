@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { EarthquakeEvent } from './types'
 
 const DATA_START_MS   = new Date('1900-01-01T00:00:00Z').getTime()
 const YEAR_MS         = 365.25 * 24 * 3600 * 1000
@@ -25,6 +26,10 @@ interface State {
   hazardMagnitude:  number   // minimum magnitude threshold for probability
   hazardYears:      number   // forecast horizon in years
 
+  // Selected event (detail window)
+  selectedEvent:    EarthquakeEvent | null
+  selectedEventPos: { x: number; y: number } | null
+
   // Camera — updated from Scene useFrame for visibility filtering
   cameraPos:    [number, number, number]
   cameraMatrix: number[]   // flat 16-element projection×view matrix
@@ -42,6 +47,7 @@ interface State {
   setShowHazard:      (b: boolean) => void
   setHazardMagnitude: (m: number) => void
   setHazardYears:     (y: number) => void
+  setSelectedEvent:   (e: EarthquakeEvent | null, pos?: { x: number; y: number }) => void
   setCameraPos:       (p: [number, number, number]) => void
   setCameraMatrix:    (m: number[]) => void
 }
@@ -56,7 +62,7 @@ export const useStore = create<State>((set) => ({
   isPlaying:      true,
   playbackSpeed:  0.008,
 
-  minMagnitude: 3.0,
+  minMagnitude: 2.5,
   maxDepth:     700,
   globeOpacity:   0.5,
   showPoints:     true,
@@ -65,6 +71,9 @@ export const useStore = create<State>((set) => ({
   showHazard:      false,
   hazardMagnitude: 6.5,
   hazardYears:     30,
+
+  selectedEvent:    null,
+  selectedEventPos: null,
 
   cameraPos:    [-0.197, 1.108, 1.405],
   cameraMatrix: new Array(16).fill(0),
@@ -81,6 +90,7 @@ export const useStore = create<State>((set) => ({
   setShowHazard:      (b)  => set({ showHazard: b }),
   setHazardMagnitude: (m)  => set({ hazardMagnitude: m }),
   setHazardYears:     (y)  => set({ hazardYears: y }),
+  setSelectedEvent:   (e, pos) => set({ selectedEvent: e, selectedEventPos: pos ?? null }),
   setCameraPos:       (p)  => set({ cameraPos: p }),
   setCameraMatrix:    (m)  => set({ cameraMatrix: m }),
 }))
