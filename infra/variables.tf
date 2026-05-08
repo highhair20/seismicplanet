@@ -18,12 +18,6 @@ variable "role_arn" {
   description = "ARN of the IAM role to assume when provisioning project resources"
 }
 
-variable "region" {
-  description = "Primary AWS region"
-  type        = string
-  default     = "us-east-1"
-}
-
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"
   type        = string
