@@ -2,8 +2,8 @@
 set -euo pipefail
 
 BUCKET="${S3_BUCKET:-seismicplanet}"
-DATA_DIR="/data"
-OUT_DIR="/tmp/web-data"
+DATA_DIR="${DATA_DIR:-/tmp/data}"
+OUT_DIR="${OUT_DIR:-/tmp/web-data}"
 
 mkdir -p "$DATA_DIR" "$OUT_DIR"
 

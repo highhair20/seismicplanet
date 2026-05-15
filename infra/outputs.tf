@@ -23,37 +23,17 @@ output "ecr_repository_url" {
   value       = aws_ecr_repository.pipeline.repository_url
 }
 
-output "eks_cluster_name" {
-  description = "EKS cluster name — use with kubectl and aws eks update-kubeconfig"
-  value       = aws_eks_cluster.main.name
+output "lambda_function_name" {
+  description = "Pipeline Lambda function name"
+  value       = aws_lambda_function.pipeline.function_name
 }
 
-output "eks_cluster_endpoint" {
-  description = "EKS API server endpoint"
-  value       = aws_eks_cluster.main.endpoint
-}
-
-output "eks_oidc_provider_arn" {
-  description = "OIDC provider ARN — reference this when creating additional IRSA roles"
-  value       = aws_iam_openid_connect_provider.eks.arn
-}
-
-output "vpc_id" {
-  description = "VPC ID"
-  value       = aws_vpc.main.id
-}
-
-output "private_subnet_ids" {
-  description = "Private subnet IDs — used for EKS nodes and internal load balancers"
-  value       = aws_subnet.private[*].id
-}
-
-output "pipeline_role_arn" {
-  description = "Annotate the pipeline Kubernetes ServiceAccount with this ARN"
-  value       = aws_iam_role.pipeline.arn
+output "lambda_function_arn" {
+  description = "Pipeline Lambda function ARN"
+  value       = aws_lambda_function.pipeline.arn
 }
 
 output "github_deploy_role_arn" {
-  description = "Set as AWS_ROLE_ARN in GitHub Actions"
+  description = "Set as AWS_DEPLOY_ROLE_ARN in GitHub Actions secrets"
   value       = aws_iam_role.github_actions_deploy.arn
 }

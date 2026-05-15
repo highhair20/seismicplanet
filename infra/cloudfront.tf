@@ -2,7 +2,7 @@
 
 # Content-hashed static assets — long TTL (Vite fingerprints filenames)
 resource "aws_cloudfront_cache_policy" "assets" {
-  name        = "${var.cluster_name}-assets"
+  name        = "${var.project_name}-assets"
   min_ttl     = 0
   default_ttl = var.cloudfront_asset_ttl
   max_ttl     = var.cloudfront_asset_ttl_max
@@ -16,7 +16,7 @@ resource "aws_cloudfront_cache_policy" "assets" {
 
 # index.html — short TTL so deploys propagate quickly
 resource "aws_cloudfront_cache_policy" "html" {
-  name        = "${var.cluster_name}-html"
+  name        = "${var.project_name}-html"
   min_ttl     = 0
   default_ttl = var.cloudfront_html_ttl
   max_ttl     = var.cloudfront_html_ttl_max
@@ -30,7 +30,7 @@ resource "aws_cloudfront_cache_policy" "html" {
 
 # Data files — medium TTL, refreshed daily by the pipeline
 resource "aws_cloudfront_cache_policy" "data" {
-  name        = "${var.cluster_name}-data"
+  name        = "${var.project_name}-data"
   min_ttl     = 0
   default_ttl = var.cloudfront_data_ttl
   max_ttl     = var.cloudfront_data_ttl_max
@@ -45,7 +45,7 @@ resource "aws_cloudfront_cache_policy" "data" {
 # ── Distribution ─────────────────────────────────────────────────
 
 resource "aws_cloudfront_origin_access_control" "main" {
-  name                              = var.cluster_name
+  name                              = var.project_name
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"

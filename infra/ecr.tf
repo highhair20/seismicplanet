@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "pipeline" {
-  name                 = "${var.cluster_name}/pipeline"
+  name                 = "${var.project_name}/pipeline"
   image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {

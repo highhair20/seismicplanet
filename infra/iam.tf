@@ -1,43 +1,33 @@
-# ── EKS OIDC provider (for IRSA) ────────────────────────────────
+# ── Pipeline Lambda execution role ───────────────────────────────
 
-data "tls_certificate" "eks" {
-  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+resource "aws_iam_role" "lambda_pipeline" {
+  name = "${var.project_name}-lambda-pipeline"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Action    = "sts:AssumeRole"
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
+
+  tags = local.common_tags
 }
 
-resource "aws_iam_openid_connect_provider" "eks" {
-  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+resource "aws_iam_role_policy_attachment" "lambda_pipeline_basic" {
+  role       = aws_iam_role.lambda_pipeline.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# ── Pipeline IRSA role ───────────────────────────────────────────
-
-data "aws_iam_policy_document" "pipeline_assume_role" {
-  statement {
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-
-    principals {
-      type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.eks.arn]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${local.oidc_issuer}:sub"
-      values   = ["system:serviceaccount:${var.k8s_namespace}:pipeline"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${local.oidc_issuer}:aud"
-      values   = ["sts.amazonaws.com"]
-    }
-  }
+resource "aws_iam_role_policy_attachment" "lambda_pipeline_ecr" {
+  role       = aws_iam_role.lambda_pipeline.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-resource "aws_iam_role" "pipeline" {
-  name               = "${var.cluster_name}-pipeline"
-  assume_role_policy = data.aws_iam_policy_document.pipeline_assume_role.json
+resource "aws_iam_role_policy_attachment" "lambda_pipeline_s3" {
+  role       = aws_iam_role.lambda_pipeline.name
+  policy_arn = aws_iam_policy.pipeline_s3.arn
 }
 
 data "aws_iam_policy_document" "pipeline_s3" {
@@ -58,13 +48,8 @@ data "aws_iam_policy_document" "pipeline_s3" {
 }
 
 resource "aws_iam_policy" "pipeline_s3" {
-  name   = "${var.cluster_name}-pipeline-s3"
+  name   = "${var.project_name}-pipeline-s3"
   policy = data.aws_iam_policy_document.pipeline_s3.json
-}
-
-resource "aws_iam_role_policy_attachment" "pipeline_s3" {
-  role       = aws_iam_role.pipeline.name
-  policy_arn = aws_iam_policy.pipeline_s3.arn
 }
 
 # ── GitHub Actions OIDC provider ────────────────────────────────
@@ -104,8 +89,9 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
 }
 
 resource "aws_iam_role" "github_actions_deploy" {
-  name               = "${var.cluster_name}-github-deploy"
+  name               = "${var.project_name}-github-deploy"
   assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
+  tags               = local.common_tags
 }
 
 data "aws_iam_policy_document" "github_actions_deploy" {
@@ -131,7 +117,7 @@ data "aws_iam_policy_document" "github_actions_deploy" {
 }
 
 resource "aws_iam_policy" "github_actions_deploy" {
-  name   = "${var.cluster_name}-github-deploy"
+  name   = "${var.project_name}-github-deploy"
   policy = data.aws_iam_policy_document.github_actions_deploy.json
 }
 
