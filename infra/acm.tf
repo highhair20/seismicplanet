@@ -8,6 +8,8 @@ resource "aws_acm_certificate" "main" {
   lifecycle {
     create_before_destroy = true
   }
+
+  tags = local.common_tags
 }
 
 resource "aws_route53_record" "acm_validation" {

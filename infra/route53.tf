@@ -1,5 +1,6 @@
 resource "aws_route53_zone" "main" {
   name = var.domain
+  tags = local.common_tags
 }
 
 resource "aws_route53_record" "apex" {
