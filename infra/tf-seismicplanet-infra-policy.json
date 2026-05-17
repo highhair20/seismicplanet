@@ -46,6 +46,7 @@
                 "lambda:InvokeFunction",
                 "lambda:ListFunctions",
                 "lambda:ListTags",
+                "lambda:ListVersionsByFunction",
                 "lambda:RemovePermission",
                 "lambda:TagResource",
                 "lambda:UntagResource",
