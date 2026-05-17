@@ -1,13 +1,14 @@
 FROM public.ecr.aws/lambda/python:3.11
 
-RUN yum install -y awscli && yum clean all
+RUN yum install -y gcc gcc-c++ make python3-devel awscli && yum clean all
 
 WORKDIR /var/task
 
 COPY pyproject.toml .
 COPY pipeline/ pipeline/
 
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir .
 
 COPY pipeline/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
