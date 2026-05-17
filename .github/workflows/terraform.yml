@@ -1,5 +1,3 @@
-# Template workflow — copy this file to .github/workflows/terraform.yml in your
-# downstream project repository. It is not executed from this location.
 name: Terraform
 
 on:
@@ -18,8 +16,8 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+    environment: dev
 
-    # If your Terraform files are in a subdirectory, uncomment and set this:
     defaults:
       run:
         working-directory: infra
@@ -31,8 +29,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Caches downloaded providers keyed on the lock file. Cache is invalidated
-      # automatically when provider versions are updated.
       - name: Cache Terraform providers
         uses: actions/cache@v4
         with:
@@ -41,13 +37,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terraform-
 
-      # Authenticates using the per-project IAM role created by new-project.sh.
-      # No long-lived credentials are stored — GitHub exchanges the OIDC token for
-      # temporary AWS credentials scoped to this role.
-      #
-      # Prerequisites (set in GitHub → Settings → Secrets and variables → Actions):
-      #   TF_ROLE_ARN  (variable) — role ARN output by new-project.sh
-      #   AWS_REGION   (variable) — e.g. us-east-1
+      # Variables are resolved from the GitHub Environment (dev, staging, prod).
+      # Each environment defines its own TF_ROLE_ARN, AWS_REGION, AWS_ACCOUNT_ID,
+      # TF_PROJECT_NAME, and TF_BACKEND_CONF. To add an environment, create it in
+      # GitHub → Settings → Environments and set these five variables.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -57,11 +50,8 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # backend.conf contains bucket, region, key, use_lockfile, and kms_key_id.
-      # It is safe to commit — it contains no secrets.
-      # Generate it by running new-project.sh and saving the printed output.
       - name: Terraform Init
-        run: terraform init -backend-config=backend.conf
+        run: terraform init -backend-config=${{ vars.TF_BACKEND_CONF }}
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
@@ -69,7 +59,6 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      # Runs on every push and pull request. Produces a plan without applying.
       - name: Terraform Plan
         run: |
           terraform plan \
@@ -80,14 +69,10 @@ jobs:
             -no-color \
             -out=tfplan
 
-      # Renders the saved plan as human-readable text for the PR comment.
-      # Writes to GITHUB_WORKSPACE (repo root) so the github-script step can read it —
-      # github-script does not inherit working-directory from defaults.run.
       - name: Render Plan
         if: github.event_name == 'pull_request'
         run: terraform show -no-color tfplan > $GITHUB_WORKSPACE/plan.txt
 
-      # Posts the plan output as a PR comment so reviewers can see exactly what will change.
       - name: Post Plan to PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -107,9 +92,8 @@ jobs:
               body: body
             });
 
-      # Applies only on merge to main. Requires a successful plan in the same run.
-      # Recommendation: protect the main branch (require PRs + passing status checks)
-      # so that apply only runs after a reviewed plan, never on a direct push.
+      # Applies only on merge to main. Add a required reviewer to the GitHub
+      # Environment to gate applies behind manual approval.
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve tfplan
