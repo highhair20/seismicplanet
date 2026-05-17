@@ -66,6 +66,7 @@ jobs:
             -var="aws_region=${{ vars.AWS_REGION }}" \
             -var="project_name=${{ vars.TF_PROJECT_NAME }}" \
             -var="role_arn=${{ vars.TF_ROLE_ARN }}" \
+            -var="github_repo=${{ vars.TF_GITHUB_REPO }}" \
             -no-color \
             -out=tfplan
 
