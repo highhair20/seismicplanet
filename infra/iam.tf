@@ -141,6 +141,37 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     actions   = ["cloudfront:CreateInvalidation"]
     resources = [aws_cloudfront_distribution.main.arn]
   }
+
+  statement {
+    sid       = "ECRAuth"
+    actions   = ["ecr:GetAuthorizationToken"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "ECRPush"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:CompleteLayerUpload",
+      "ecr:DescribeImages",
+      "ecr:InitiateLayerUpload",
+      "ecr:PutImage",
+      "ecr:UploadLayerPart",
+    ]
+    resources = [aws_ecr_repository.pipeline.arn]
+  }
+
+  statement {
+    sid = "LambdaUpdate"
+    actions = [
+      "lambda:UpdateFunctionCode",
+      "lambda:UpdateFunctionConfiguration",
+    ]
+    resources = [
+      aws_lambda_function.pipeline.arn,
+      aws_lambda_function.today.arn,
+    ]
+  }
 }
 
 resource "aws_iam_policy" "github_actions_deploy" {

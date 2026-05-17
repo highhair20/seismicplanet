@@ -1,6 +1,6 @@
 resource "aws_ecr_repository" "pipeline" {
   name                 = "${var.project_name}/pipeline"
-  image_tag_mutability = "IMMUTABLE"
+  image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
