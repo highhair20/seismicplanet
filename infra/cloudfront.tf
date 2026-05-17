@@ -42,6 +42,20 @@ resource "aws_cloudfront_cache_policy" "data" {
   }
 }
 
+# Live today endpoint — 60s TTL matches the polling interval
+resource "aws_cloudfront_cache_policy" "today" {
+  name        = "${var.project_name}-today"
+  min_ttl     = 0
+  default_ttl = 60
+  max_ttl     = 60
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
+    query_strings_config { query_string_behavior = "none" }
+  }
+}
+
 # ── Distribution ─────────────────────────────────────────────────
 
 resource "aws_cloudfront_origin_access_control" "main" {
@@ -62,6 +76,18 @@ resource "aws_cloudfront_distribution" "main" {
     domain_name              = aws_s3_bucket.main.bucket_regional_domain_name
     origin_id                = "s3-${var.bucket_name}"
     origin_access_control_id = aws_cloudfront_origin_access_control.main.id
+  }
+
+  origin {
+    domain_name = trimsuffix(trimprefix(aws_lambda_function_url.today.function_url, "https://"), "/")
+    origin_id   = "lambda-today"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
   }
 
   # Default: static assets — long TTL (Vite outputs content-hashed filenames)
@@ -94,6 +120,17 @@ resource "aws_cloudfront_distribution" "main" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
     cache_policy_id        = aws_cloudfront_cache_policy.data.id
+  }
+
+  # Live today endpoint — proxied to Lambda, cached 60s at edge
+  ordered_cache_behavior {
+    path_pattern           = "/api/today"
+    target_origin_id       = "lambda-today"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    cache_policy_id        = aws_cloudfront_cache_policy.today.id
   }
 
   # SPA fallback — unknown paths return index.html so React routing works

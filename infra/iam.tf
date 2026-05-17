@@ -52,6 +52,33 @@ resource "aws_iam_policy" "pipeline_s3" {
   policy = data.aws_iam_policy_document.pipeline_s3.json
 }
 
+# ── Today API Lambda execution role ─────────────────────────────
+
+resource "aws_iam_role" "lambda_today" {
+  name = "${var.project_name}-lambda-today"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Action    = "sts:AssumeRole"
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_today_basic" {
+  role       = aws_iam_role.lambda_today.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_today_ecr" {
+  role       = aws_iam_role.lambda_today.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
 # ── GitHub Actions OIDC provider ────────────────────────────────
 
 resource "aws_iam_openid_connect_provider" "github" {
